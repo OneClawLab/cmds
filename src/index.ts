@@ -25,6 +25,8 @@ program
 
 // Configure commander to exit with code 2 on argument/usage errors
 program.exitOverride();
+program.enablePositionalOptions();
+program.passThroughOptions();
 program.configureOutput({
   writeErr: (str) => process.stderr.write(str),
   writeOut: (str) => process.stdout.write(str),
@@ -154,7 +156,14 @@ program
     const json = shouldOutputJson(!!opts.json);
 
     try {
-      const tldrIndex = await loadTldrIndex();
+      let tldrIndex: Awaited<ReturnType<typeof loadTldrIndex>>;
+      try {
+        tldrIndex = await loadTldrIndex();
+      } catch {
+        // tldr index not yet generated — scan still works, just no tldr metadata
+        process.stderr.write('Warning: tldr index not found, scanning without tldr metadata.\n');
+        tldrIndex = [];
+      }
       const result = await scan(tldrIndex);
       process.stdout.write(format(result, { json }) + '\n');
       process.exitCode = 0;

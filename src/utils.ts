@@ -29,6 +29,7 @@ export async function execCommand(
   const { stdout, stderr } = await execFileAsync(command, args, {
     timeout: 5000,
     maxBuffer: 1024 * 1024,
+    windowsHide: true,
   });
   return { stdout, stderr };
 }

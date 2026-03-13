@@ -14,9 +14,9 @@ import { arbRuntimeIndex } from './helpers/arbitraries.js';
 
 describe('data layer', () => {
   describe('getTldrIndexPath', () => {
-    it('returns a path ending with dist/data/tldr-index.json', () => {
+    it('returns a path ending with data/tldr-index.json', () => {
       const p = getTldrIndexPath();
-      expect(p).toMatch(/dist[/\\]data[/\\]tldr-index\.json$/);
+      expect(p).toMatch(/data[/\\]tldr-index\.json$/);
     });
 
     it('returns an absolute path', () => {

@@ -6,13 +6,13 @@ import type { TldrIndex, RuntimeIndex } from './types.js';
 
 /**
  * Get the absolute path to the static tldr-index.json bundled with the package.
- * Resolves relative to the built output: <package-root>/dist/data/tldr-index.json
+ * Resolves relative to the built output: <package-root>/data/tldr-index.json
  */
 export function getTldrIndexPath(): string {
   const thisFile = fileURLToPath(import.meta.url);
   const distDir = path.dirname(thisFile);          // dist/
   const packageRoot = path.dirname(distDir);       // package root
-  return path.join(packageRoot, 'dist', 'data', 'tldr-index.json');
+  return path.join(packageRoot, 'data', 'tldr-index.json');
 }
 
 /**

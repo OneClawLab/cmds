@@ -11,7 +11,9 @@
     "build": "tsup",
     "test": "vitest",
     "test:coverage": "vitest run --coverage",
-    "release:local": "npm run build && npm link"
+    "release:local": "npm run build && npm link",
+    "prepare:reload": "npx tsx scripts/reload.ts",
+    "prepare:categorize": "npx tsx scripts/categorize.ts"
   },
   "keywords": [],
   "author": "",
