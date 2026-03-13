@@ -73,7 +73,7 @@ export const arbTldrEntry: fc.Arbitrary<TldrEntry> = fc.record({
 /** RuntimeIndexMeta with valid ISO timestamp */
 export const arbRuntimeIndexMeta: fc.Arbitrary<RuntimeIndexMeta> = fc.record({
   vdbAvailable: fc.boolean(),
-  lastScanTime: fc.date({ min: new Date('2020-01-01'), max: new Date('2030-01-01') }).map((d) =>
+  lastScanTime: fc.date({ min: new Date('2020-01-01'), max: new Date('2030-01-01'), noInvalidDate: true }).map((d) =>
     d.toISOString(),
   ),
   systemInfo: fc.record({

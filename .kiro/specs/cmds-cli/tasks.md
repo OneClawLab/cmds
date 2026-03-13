@@ -18,7 +18,7 @@
     - 读取失败时抛出明确错误
     - _Requirements: 7.1, 7.2, 7.3, 7.5_
 
-  - [ ]* 2.2 编写 data 层属性测试 — Runtime Index round-trip
+  - [x]* 2.2 编写 data 层属性测试 — Runtime Index round-trip
     - **Property 9: Runtime Index 序列化 round-trip**
     - **Validates: Requirements 5.5, 7.4**
 
@@ -26,7 +26,7 @@
     - 实现 isTTY, shouldOutputJson, format 及各子命令的 Markdown 格式化函数
     - _Requirements: 6.1, 6.2, 6.3, 6.4_
 
-  - [ ]* 2.4 编写 formatter 属性测试 — 输出格式决策
+  - [x]* 2.4 编写 formatter 属性测试 — 输出格式决策
     - **Property 10: 输出格式决策正确性**
     - **Validates: Requirements 6.1, 6.2, 6.3**
 
@@ -39,7 +39,7 @@
     - 实现 routeQuery 函数，根据 query 是否匹配 Runtime_Index 中的命令名决定路由
     - _Requirements: 1.1, 1.2_
 
-  - [ ]* 3.3 编写 router 属性测试 — 路由正确性
+  - [x]* 3.3 编写 router 属性测试 — 路由正确性
     - **Property 1: 智能路由正确性**
     - **Validates: Requirements 1.1, 1.2**
 
@@ -53,12 +53,12 @@
     - 实现 search 主函数（VDB 优先，fallback 到 fuzzysort）
     - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6_
 
-  - [ ]* 5.2 编写 search 属性测试 — 排序与 limit
+  - [x]* 5.2 编写 search 属性测试 — 排序与 limit
     - **Property 2: 搜索结果按相关性排序**
     - **Property 3: 搜索结果数量不超过 limit**
     - **Validates: Requirements 2.1, 2.2, 2.3**
 
-  - [ ]* 5.3 编写 search 属性测试 — 匹配范围
+  - [x]* 5.3 编写 search 属性测试 — 匹配范围
     - **Property 4: 模糊搜索匹配范围覆盖 name**
     - **Validates: Requirements 2.6**
 
@@ -69,7 +69,7 @@
     - 命令不存在时抛出 CommandNotFoundError
     - _Requirements: 3.1, 3.2, 3.3, 3.4_
 
-  - [ ]* 6.2 编写 info 属性测试 — 结构完整性
+  - [x]* 6.2 编写 info 属性测试 — 结构完整性
     - **Property 5: Info 返回完整结构化信息**
     - **Validates: Requirements 3.1**
 
@@ -79,7 +79,7 @@
     - 分类不存在时抛出 CategoryNotFoundError
     - _Requirements: 4.1, 4.2, 4.3, 4.4_
 
-  - [ ]* 7.2 编写 list 属性测试 — 过滤与 summary 一致性
+  - [x]* 7.2 编写 list 属性测试 — 过滤与 summary 一致性
     - **Property 6: 分类过滤正确性**
     - **Property 7: Summary 概览一致性**
     - **Validates: Requirements 4.1, 4.2**
@@ -96,7 +96,7 @@
     - 自动创建 `~/.config/cmds/` 目录
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6_
 
-  - [ ]* 9.2 编写 scanner 属性测试 — Tldr 比对
+  - [x]* 9.2 编写 scanner 属性测试 — Tldr 比对
     - **Property 8: Tldr 索引比对正确性**
     - **Validates: Requirements 5.2**
 
@@ -108,7 +108,7 @@
     - 错误输出写入 stderr
     - _Requirements: 1.3, 1.4, 2.7, 3.3, 4.3, 8.1, 8.2, 8.3_
 
-  - [ ]* 10.2 编写 CLI 集成单元测试
+  - [x]* 10.2 编写 CLI 集成单元测试
     - 测试无参数输出帮助、info 子命令路由、搜索无结果退出码等
     - _Requirements: 1.3, 1.4, 2.7, 8.1, 8.2, 8.3_
 

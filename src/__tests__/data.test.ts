@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { writeFile, mkdir, rm, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
+import fc from 'fast-check';
 import {
   getTldrIndexPath,
   getRuntimeIndexPath,
@@ -9,6 +10,7 @@ import {
   saveRuntimeIndex,
 } from '../data.js';
 import type { RuntimeIndex } from '../types.js';
+import { arbRuntimeIndex } from './helpers/arbitraries.js';
 
 describe('data layer', () => {
   describe('getTldrIndexPath', () => {
@@ -111,5 +113,21 @@ describe('data layer', () => {
       expect(loaded!.commands).toHaveLength(1);
       expect(loaded!.commands[0]!.name).toBe('ls');
     });
+  });
+});
+
+describe('Property 9: Runtime Index round-trip', () => {
+  /**
+   * **Validates: Requirements 5.5, 7.4**
+   */
+  it('Feature: cmds-cli, Property 9: serializing to JSON then deserializing produces equivalent object', () => {
+    fc.assert(
+      fc.property(arbRuntimeIndex, (index) => {
+        const serialized = JSON.stringify(index);
+        const deserialized = JSON.parse(serialized);
+        expect(deserialized).toEqual(index);
+      }),
+      { numRuns: 100 }
+    );
   });
 });
