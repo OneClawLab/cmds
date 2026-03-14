@@ -5,7 +5,7 @@ import type {
   RuntimeIndexMeta,
   RuntimeIndex,
   SearchResult,
-} from '../../types.js';
+} from '../../src/types.js';
 
 // --- Predefined categories ---
 
