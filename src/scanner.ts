@@ -134,6 +134,7 @@ function buildXdbContent(cmd: CommandEntry): string {
 /**
  * Ingest command entries into xdb collection via batch put.
  * Only ingests commands that have meaningful content (description or examples).
+ * Splits into chunks to avoid overwhelming the embedding API.
  * Silently returns on any failure.
  */
 async function ingestToXdb(commands: CommandEntry[]): Promise<void> {
@@ -149,25 +150,28 @@ async function ingestToXdb(commands: CommandEntry[]): Promise<void> {
 
   if (records.length === 0) return;
 
-  // Build JSONL and pipe via stdin using a child process
-  const jsonl = records.map((r) => JSON.stringify(r)).join('\n');
-
   const { execFile } = await import('node:child_process');
   const { promisify } = await import('node:util');
   const execFileAsync = promisify(execFile);
 
-  try {
-    const child = execFileAsync('xdb', ['put', XDB_COLLECTION, '--batch'], {
-      timeout: 30_000,
-      maxBuffer: 10 * 1024 * 1024,
-      windowsHide: true,
-    });
-    // Write JSONL to stdin
-    child.child.stdin?.write(jsonl);
-    child.child.stdin?.end();
-    await child;
-  } catch {
-    // Silently fail — xdb ingestion is best-effort
+  const BATCH_SIZE = 100;
+
+  for (let i = 0; i < records.length; i += BATCH_SIZE) {
+    const chunk = records.slice(i, i + BATCH_SIZE);
+    const jsonl = chunk.map((r) => JSON.stringify(r)).join('\n');
+
+    try {
+      const child = execFileAsync('xdb', ['put', XDB_COLLECTION, '--batch'], {
+        timeout: 60_000,
+        maxBuffer: 10 * 1024 * 1024,
+        windowsHide: true,
+      });
+      child.child.stdin?.write(jsonl);
+      child.child.stdin?.end();
+      await child;
+    } catch {
+      // Silently fail — xdb ingestion is best-effort
+    }
   }
 }
 
