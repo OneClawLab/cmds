@@ -3,6 +3,16 @@ import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+// Gracefully handle EPIPE (broken pipe, e.g. `cmds ... | head`)
+process.stdout.on('error', (err: NodeJS.ErrnoException) => {
+  if (err.code === 'EPIPE') process.exit(0);
+  throw err;
+});
+process.stderr.on('error', (err: NodeJS.ErrnoException) => {
+  if (err.code === 'EPIPE') process.exit(0);
+  throw err;
+});
+
 import { routeQuery } from './router.js';
 import { search } from './search.js';
 import { resolveInfo, CommandNotFoundError } from './info.js';
