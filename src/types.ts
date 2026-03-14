@@ -29,7 +29,7 @@ export interface CommandEntry {
 }
 
 export interface RuntimeIndexMeta {
-  vdbAvailable: boolean;
+  xdbAvailable: boolean;
   lastScanTime: string; // ISO 8601
   systemInfo: {
     platform: string;
@@ -89,6 +89,6 @@ export interface ScanResult {
   commandsFound: number;
   commandsWithTldr: number;
   commandsWithHelp: number;
-  vdbAvailable: boolean;
+  xdbAvailable: boolean;
   scanTime: string;
 }

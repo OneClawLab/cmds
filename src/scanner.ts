@@ -90,9 +90,6 @@ export async function checkXdbAvailability(): Promise<boolean> {
   return commandExists('xdb');
 }
 
-/** @deprecated Use checkXdbAvailability instead */
-export const checkVdbAvailability = checkXdbAvailability;
-
 /**
  * Collection name used in xdb for cmds data.
  */
@@ -181,7 +178,7 @@ const HELP_FALLBACK_LIMIT = 20;
  * 1. Detect installed commands via PATH scanning
  * 2. Merge with tldr index
  * 3. Try --help for a limited batch of unknown commands
- * 4. Check VDB availability
+ * 4. Check xdb availability
  * 5. Build and save RuntimeIndex
  * 6. Return ScanResult summary
  */
@@ -203,11 +200,11 @@ export async function scan(tldrIndex: TldrIndex): Promise<ScanResult> {
     }
   }
 
-  const vdbAvailable = await checkXdbAvailability();
+  const xdbAvailable = await checkXdbAvailability();
 
   const runtimeIndex: RuntimeIndex = {
     meta: {
-      vdbAvailable,
+      xdbAvailable,
       lastScanTime: new Date().toISOString(),
       systemInfo: {
         platform: process.platform,
@@ -221,7 +218,7 @@ export async function scan(tldrIndex: TldrIndex): Promise<ScanResult> {
   await saveRuntimeIndex(runtimeIndex);
 
   // If xdb is available, initialize collection and ingest data
-  if (vdbAvailable) {
+  if (xdbAvailable) {
     const colReady = await ensureXdbCollection();
     if (colReady) {
       await ingestToXdb(commands);
@@ -232,7 +229,7 @@ export async function scan(tldrIndex: TldrIndex): Promise<ScanResult> {
     commandsFound: commands.length,
     commandsWithTldr: commands.filter((c) => c.source === 'tldr').length,
     commandsWithHelp,
-    vdbAvailable,
+    xdbAvailable,
     scanTime: runtimeIndex.meta.lastScanTime,
   };
 }

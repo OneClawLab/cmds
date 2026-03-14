@@ -36,13 +36,13 @@ cmds "find large files" --limit 10
 - `cmds info <command>` 作为显式写法始终可用。
 
 **搜索策略（双层）**:
-1. 当系统中存在 `vdb` 命令（向量数据库，独立 repo，暂未实现）时，使用 Embedding + 向量检索。
+1. 当系统中存在 `xdb` 命令（意图驱动数据中心，独立 repo）时，使用 Embedding + 向量检索。
 2. Fallback: fzf 风格的模糊匹配（基于 fuzzysort 或类似库），匹配对象为命令的 name + description + examples 文本。
 
-**`vdb` 可用性检测**:
-- 在扫描阶段检测 `vdb` 命令是否存在，结果记录在运行时索引中。
-- 搜索时根据记录决定走 vdb 还是 fallback，无需每次 `which`。
-- 若 `vdb` 存在但调用出错，静默 fallback 到模糊匹配。
+**`xdb` 可用性检测**:
+- 在扫描阶段检测 `xdb` 命令是否存在，结果记录在运行时索引中。
+- 搜索时根据记录决定走 xdb 还是 fallback，无需每次 `which`。
+- 若 `xdb` 存在但调用出错，静默 fallback 到模糊匹配。
 
 ### B. 信息查询: `cmds info <command>`
 
@@ -105,7 +105,7 @@ cmds scan --json
 1. 检测系统已安装的可执行命令（优先 `compgen -c`，fallback 遍历 `$PATH`）。
 2. 与随包分发的 tldr 全量索引比对，筛选出本机实际安装的命令及其 metadata。
 3. 对于本机存在但 tldr 索引中没有的命令，尝试 `--help` 提取基本信息。
-4. 检测 `vdb` 命令可用性，记录到索引中。
+4. 检测 `xdb` 命令可用性，记录到索引中。
 5. 将结果写入运行时索引（`~/.config/cmds/index.json`）。
 
 ## 4. 数据架构
@@ -160,7 +160,7 @@ cmds scan --json
 **更新方式**: 通过 `cmds scan` 命令按需更新，不做定时/自动扫描。
 
 **附加元数据**:
-- `vdbAvailable`: boolean — `vdb` 命令是否可用。
+- `xdbAvailable`: boolean — `xdb` 命令是否可用。
 - `lastScanTime`: ISO 时间戳。
 - `systemInfo`: OS 类型等环境信息。
 
@@ -206,7 +206,7 @@ cmds scan --json
   └────┬──────────┘
        │
   ┌────▼──────────────┐
-  │ Search Engine     │  语义搜索 (vdb) / 模糊匹配 (fuzzysort)
+  │ Search Engine     │  语义搜索 (xdb) / 模糊匹配 (fuzzysort)
   │ Info Resolver     │  运行时索引查询 / --help fallback
   │ List Aggregator   │  分类汇总 / 过滤
   │ Scanner           │  PATH 扫描 / 索引生成

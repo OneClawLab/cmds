@@ -138,7 +138,7 @@ export function formatScanResult(result: ScanResult): string {
     `- Commands found: ${result.commandsFound}`,
     `- With tldr data: ${result.commandsWithTldr}`,
     `- With help text: ${result.commandsWithHelp}`,
-    `- VDB available: ${result.vdbAvailable ? 'yes' : 'no'}`,
+    `- xdb available: ${result.xdbAvailable ? 'yes' : 'no'}`,
     `- Scan time: ${result.scanTime}`,
   ];
   return lines.join('\n');

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import fc from 'fast-check';
-import { mergeWithTldr, checkVdbAvailability, detectCommands } from '../scanner.js';
+import { mergeWithTldr, checkXdbAvailability, detectCommands } from '../scanner.js';
 import type { TldrIndex, TldrEntry } from '../types.js';
 import { arbCommandName, arbTldrEntry } from './helpers/arbitraries.js';
 
@@ -84,9 +84,9 @@ describe('scanner', () => {
     });
   });
 
-  describe('checkVdbAvailability', () => {
+  describe('checkXdbAvailability', () => {
     it('returns a boolean', async () => {
-      const result = await checkVdbAvailability();
+      const result = await checkXdbAvailability();
       expect(typeof result).toBe('boolean');
     });
   });

@@ -75,9 +75,6 @@ export async function searchXdb(query: string, limit: number): Promise<SearchRes
   }
 }
 
-/** @deprecated Use searchXdb instead */
-export const searchVdb = searchXdb;
-
 /**
  * Main search function. Prefers xdb semantic search when available, falls back to fuzzysort.
  * Never throws — catches all errors and falls back gracefully.
@@ -88,7 +85,7 @@ export async function search(
   options: { limit: number },
 ): Promise<SearchResult[]> {
   try {
-    if (index.meta.vdbAvailable) {
+    if (index.meta.xdbAvailable) {
       const xdbResults = await searchXdb(query, options.limit);
       if (xdbResults !== null) return xdbResults;
     }

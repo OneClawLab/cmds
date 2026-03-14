@@ -84,12 +84,12 @@ describe('format', () => {
       commandsFound: 100,
       commandsWithTldr: 80,
       commandsWithHelp: 15,
-      vdbAvailable: true,
+      xdbAvailable: true,
       scanTime: '2024-01-01T00:00:00Z',
     };
     const result = format(data, { json: false });
     expect(result).toContain('Commands found: 100');
-    expect(result).toContain('VDB available: yes');
+    expect(result).toContain('xdb available: yes');
   });
 
   it('handles empty array', () => {
@@ -196,7 +196,7 @@ describe('formatScanResult', () => {
       commandsFound: 50,
       commandsWithTldr: 40,
       commandsWithHelp: 8,
-      vdbAvailable: false,
+      xdbAvailable: false,
       scanTime: '2024-06-01T12:00:00Z',
     };
     const output = formatScanResult(result);
@@ -204,7 +204,7 @@ describe('formatScanResult', () => {
     expect(output).toContain('Commands found: 50');
     expect(output).toContain('With tldr data: 40');
     expect(output).toContain('With help text: 8');
-    expect(output).toContain('VDB available: no');
+    expect(output).toContain('xdb available: no');
     expect(output).toContain('Scan time: 2024-06-01T12:00:00Z');
   });
 });
