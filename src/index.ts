@@ -20,6 +20,7 @@ import { listSummary, listByCategory, CategoryNotFoundError } from './list.js';
 import { scan } from './scanner.js';
 import { loadRuntimeIndex, loadTldrIndex } from './data.js';
 import { format, shouldOutputJson } from './formatter.js';
+import { installHelp, addSubcommandExamples } from './help.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const packageJson = JSON.parse(
@@ -31,7 +32,8 @@ const program = new Command();
 program
   .name('cmds')
   .description('cmds - Discover linux commands for human and AI')
-  .version(packageJson.version);
+  .version(`cmds ${packageJson.version}`)
+  .showHelpAfterError(true);
 
 // Configure commander to exit with code 2 on argument/usage errors
 program.exitOverride();
@@ -41,6 +43,9 @@ program.configureOutput({
   writeErr: (str) => process.stderr.write(str),
   writeOut: (str) => process.stdout.write(str),
 });
+
+// Install help system
+installHelp(program);
 
 // --- Default command (smart router) ---
 program
@@ -92,10 +97,11 @@ program
   });
 
 // --- info subcommand ---
-program
+const infoCmd = program
   .command('info <command>')
   .description('Show detailed info for a command')
   .option('--json', 'JSON output')
+  .showHelpAfterError(true)
   .action(async (command: string, opts: { json?: boolean }) => {
     const json = shouldOutputJson(!!opts.json);
 
@@ -112,7 +118,7 @@ program
       process.exitCode = 0;
     } catch (err) {
       if (err instanceof CommandNotFoundError) {
-        process.stderr.write(err.message + '\n');
+        process.stderr.write(`${err.message}\nTry \`cmds scan\` to refresh the index, or \`cmds "${command}"\` to search.\n`);
         process.exitCode = 1;
       } else {
         process.stderr.write(`Error: ${err instanceof Error ? err.message : String(err)}\n`);
@@ -120,9 +126,10 @@ program
       }
     }
   });
+addSubcommandExamples(infoCmd, 'info');
 
 // --- list subcommand ---
-program
+const listCmd = program
   .command('list')
   .description('List available commands')
   .option('--category <type>', 'filter by category')
@@ -156,9 +163,10 @@ program
       }
     }
   });
+addSubcommandExamples(listCmd, 'list');
 
 // --- scan subcommand ---
-program
+const scanCmd = program
   .command('scan')
   .description('Scan system for installed commands')
   .option('--json', 'JSON output')
@@ -182,6 +190,7 @@ program
       process.exitCode = 1;
     }
   });
+addSubcommandExamples(scanCmd, 'scan');
 
 // --- Parse and handle errors ---
 (async () => {
@@ -191,7 +200,8 @@ program
     // commander throws CommanderError on exitOverride
     if (err && typeof err === 'object' && 'exitCode' in err) {
       const exitCode = (err as { exitCode: number }).exitCode;
-      process.exitCode = exitCode;
+      // commander uses exitCode=1 for argument errors; remap to 2 per spec
+      process.exitCode = exitCode === 1 ? 2 : exitCode;
     } else {
       process.stderr.write(`Error: ${err instanceof Error ? err.message : String(err)}\n`);
       process.exitCode = 1;

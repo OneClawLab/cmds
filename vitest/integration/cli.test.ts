@@ -50,8 +50,8 @@ describe('CLI integration', () => {
   it('outputs version with --version flag and exits with code 0', async () => {
     const result = await runCli('--version');
     expect(result.exitCode).toBe(0);
-    // Version should match semver pattern
-    expect(result.stdout.trim()).toMatch(/^\d+\.\d+\.\d+/);
+    // Version should match "cmds X.Y.Z" pattern
+    expect(result.stdout.trim()).toMatch(/^cmds \d+\.\d+\.\d+/);
   });
 
   // Requirement 1.3: Explicit `cmds info <command>` routes to Info_Resolver
