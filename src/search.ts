@@ -1,6 +1,5 @@
 import fuzzysort from 'fuzzysort';
 import type { RuntimeIndex, SearchResult } from './types.js';
-import { execCommand } from './utils.js';
 
 /**
  * Build a searchable text string from a command entry by concatenating
@@ -39,27 +38,48 @@ export function searchFuzzy(query: string, index: RuntimeIndex, limit: number): 
 }
 
 /**
- * Search using external VDB (vector database) command.
+ * Search using xdb semantic similarity search.
+ * Calls `xdb find cmds --similar --limit <n>` with query piped via stdin.
  * Returns null on any failure so caller can fallback.
  */
-export async function searchVdb(query: string, limit: number): Promise<SearchResult[] | null> {
+export async function searchXdb(query: string, limit: number): Promise<SearchResult[] | null> {
   try {
-    const { stdout } = await execCommand('vdb', ['search', '--query', query, '--limit', String(limit), '--json']);
-    const parsed = JSON.parse(stdout);
-    if (!Array.isArray(parsed)) return null;
-    return parsed.map((item: Record<string, unknown>) => ({
-      name: String(item.name ?? ''),
-      description: String(item.description ?? ''),
-      score: Number(item.score ?? 0),
-      category: String(item.category ?? ''),
-    }));
+    const { execFile } = await import('node:child_process');
+    const { promisify } = await import('node:util');
+    const execFileAsync = promisify(execFile);
+
+    const child = execFileAsync(
+      'xdb',
+      ['find', 'cmds', query, '--similar', '--limit', String(limit)],
+      { timeout: 10_000, maxBuffer: 1024 * 1024, windowsHide: true },
+    );
+    const { stdout } = await child;
+
+    // xdb outputs JSONL — one JSON object per line
+    const lines = stdout.trim().split('\n').filter((l) => l.trim().length > 0);
+    if (lines.length === 0) return null;
+
+    const results: SearchResult[] = [];
+    for (const line of lines) {
+      const item = JSON.parse(line) as Record<string, unknown>;
+      results.push({
+        name: String(item.name ?? ''),
+        description: String(item.description ?? ''),
+        score: Number(item._score ?? 0),
+        category: String(item.category ?? ''),
+      });
+    }
+    return results.length > 0 ? results : null;
   } catch {
     return null;
   }
 }
 
+/** @deprecated Use searchXdb instead */
+export const searchVdb = searchXdb;
+
 /**
- * Main search function. Prefers VDB when available, falls back to fuzzysort.
+ * Main search function. Prefers xdb semantic search when available, falls back to fuzzysort.
  * Never throws — catches all errors and falls back gracefully.
  */
 export async function search(
@@ -69,8 +89,8 @@ export async function search(
 ): Promise<SearchResult[]> {
   try {
     if (index.meta.vdbAvailable) {
-      const vdbResults = await searchVdb(query, options.limit);
-      if (vdbResults !== null) return vdbResults;
+      const xdbResults = await searchXdb(query, options.limit);
+      if (xdbResults !== null) return xdbResults;
     }
     return searchFuzzy(query, index, options.limit);
   } catch {

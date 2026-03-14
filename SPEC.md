@@ -260,5 +260,5 @@ $ cmds scan --json
 - **构建工具**: tsup (ESM)
 - **测试框架**: vitest + fast-check
 - **模糊匹配**: fuzzysort 或类似库
-- **向量搜索**: 通过外部 `vdb` 命令（独立 repo，可选依赖）
+- **向量搜索**: 通过外部 `xdb` 命令（独立 repo，可选依赖）
 - **数据源**: tldr-pages `pages/common`（本地 clone at `../tldr`）

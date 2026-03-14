@@ -1,6 +1,6 @@
 import { readdir } from 'node:fs/promises';
 import path from 'node:path';
-import { commandExists } from './utils.js';
+import { commandExists, execCommand } from './utils.js';
 import { saveRuntimeIndex } from './data.js';
 import { helpFallback } from './info.js';
 import type {
@@ -84,10 +84,94 @@ export function mergeWithTldr(
 }
 
 /**
- * Check if the external `vdb` command is available.
+ * Check if the external `xdb` command is available.
  */
-export async function checkVdbAvailability(): Promise<boolean> {
-  return commandExists('vdb');
+export async function checkXdbAvailability(): Promise<boolean> {
+  return commandExists('xdb');
+}
+
+/** @deprecated Use checkXdbAvailability instead */
+export const checkVdbAvailability = checkXdbAvailability;
+
+/**
+ * Collection name used in xdb for cmds data.
+ */
+const XDB_COLLECTION = 'cmds';
+
+/**
+ * Initialize the xdb collection for cmds if it doesn't already exist.
+ * Uses hybrid/knowledge-base policy for semantic + full-text search.
+ * Silently returns false on any failure.
+ */
+async function ensureXdbCollection(): Promise<boolean> {
+  try {
+    // Check if collection already exists by listing
+    const { stdout } = await execCommand('xdb', ['col', 'list']);
+    const lines = stdout.trim().split('\n').filter((l) => l.trim().length > 0);
+    for (const line of lines) {
+      try {
+        const info = JSON.parse(line) as { name?: string };
+        if (info.name === XDB_COLLECTION) return true;
+      } catch { /* skip malformed lines */ }
+    }
+    // Collection doesn't exist — create it
+    await execCommand('xdb', ['col', 'init', XDB_COLLECTION, '--policy', 'hybrid/knowledge-base']);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Build the xdb record content string from a CommandEntry.
+ * Concatenates name, description, and example texts for embedding.
+ */
+function buildXdbContent(cmd: CommandEntry): string {
+  const parts = [cmd.name, cmd.description];
+  for (const ex of cmd.examples) {
+    parts.push(ex.description, ex.command);
+  }
+  return parts.filter(Boolean).join(' ');
+}
+
+/**
+ * Ingest command entries into xdb collection via batch put.
+ * Only ingests commands that have meaningful content (description or examples).
+ * Silently returns on any failure.
+ */
+async function ingestToXdb(commands: CommandEntry[]): Promise<void> {
+  const records = commands
+    .filter((cmd) => cmd.description || cmd.examples.length > 0)
+    .map((cmd) => ({
+      id: cmd.name,
+      content: buildXdbContent(cmd),
+      name: cmd.name,
+      description: cmd.description,
+      category: cmd.category,
+    }));
+
+  if (records.length === 0) return;
+
+  // Build JSONL and pipe via stdin using a child process
+  const jsonl = records.map((r) => JSON.stringify(r)).join('\n');
+
+  const { execFile } = await import('node:child_process');
+  const { promisify } = await import('node:util');
+  const execFileAsync = promisify(execFile);
+
+  try {
+    const child = execFileAsync('xdb', ['put', XDB_COLLECTION, '--batch'], {
+      timeout: 30_000,
+      maxBuffer: 10 * 1024 * 1024,
+      windowsHide: true,
+    });
+    // Write JSONL to stdin
+    child.child.stdin?.write(jsonl);
+    child.child.stdin?.end();
+    await child;
+  } catch {
+    // Silently fail — xdb ingestion is best-effort
+  }
 }
 
 const HELP_FALLBACK_LIMIT = 20;
@@ -119,7 +203,7 @@ export async function scan(tldrIndex: TldrIndex): Promise<ScanResult> {
     }
   }
 
-  const vdbAvailable = await checkVdbAvailability();
+  const vdbAvailable = await checkXdbAvailability();
 
   const runtimeIndex: RuntimeIndex = {
     meta: {
@@ -135,6 +219,14 @@ export async function scan(tldrIndex: TldrIndex): Promise<ScanResult> {
   };
 
   await saveRuntimeIndex(runtimeIndex);
+
+  // If xdb is available, initialize collection and ingest data
+  if (vdbAvailable) {
+    const colReady = await ensureXdbCollection();
+    if (colReady) {
+      await ingestToXdb(commands);
+    }
+  }
 
   return {
     commandsFound: commands.length,
