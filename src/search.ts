@@ -2,6 +2,12 @@ import fuzzysort from 'fuzzysort';
 import { spawnCommand } from './os-utils.js';
 import type { RuntimeIndex, SearchResult } from './types.js';
 
+/** Minimum internal fetch size for each engine before RRF merging. */
+const RRF_MIN_FETCH = 20;
+
+/** RRF constant — dampens the impact of rank differences. */
+const RRF_K = 60;
+
 /**
  * Build a searchable text string from a command entry by concatenating
  * name, description, and all example descriptions/commands.
@@ -40,15 +46,14 @@ export function searchFuzzy(query: string, index: RuntimeIndex, limit: number): 
 
 /**
  * Search using xdb semantic similarity search.
- * Calls `xdb find cmds --similar --limit <n>` with query piped via stdin.
+ * Passes query as a positional CLI argument to avoid shell word-splitting on Windows.
  * Returns null on any failure so caller can fallback.
  */
 export async function searchXdb(query: string, limit: number): Promise<SearchResult[] | null> {
   try {
     const { stdout } = await spawnCommand(
       'xdb',
-      ['find', 'cmds', '--similar', '--limit', String(limit), '--json'],
-      query,
+      ['find', 'cmds', query, '--similar', '--limit', String(limit), '--json'],
     );
 
     // xdb outputs JSONL — one JSON object per line
@@ -72,27 +77,62 @@ export async function searchXdb(query: string, limit: number): Promise<SearchRes
 }
 
 /**
- * Main search function. Prefers xdb semantic search when available, falls back to fuzzysort.
- * Never throws — catches all errors and falls back gracefully.
- * @param minScore - optional minimum score threshold (0–1). Results below this are filtered out.
+ * Merge ranked result lists using Reciprocal Rank Fusion.
+ * RRF score = Σ 1 / (k + rank_i), where rank is 1-based.
+ * Results present in only one list still get a score from that list alone.
+ * Final list is sorted by RRF score descending, then trimmed to `limit`.
+ */
+export function rrfMerge(lists: SearchResult[][], limit: number): SearchResult[] {
+  // Map from name → { rrfScore, meta (first seen) }
+  const acc = new Map<string, { rrfScore: number; result: SearchResult }>();
+
+  for (const list of lists) {
+    list.forEach((item, idx) => {
+      const rank = idx + 1; // 1-based
+      const contribution = 1 / (RRF_K + rank);
+      const existing = acc.get(item.name);
+      if (existing) {
+        existing.rrfScore += contribution;
+      } else {
+        acc.set(item.name, { rrfScore: contribution, result: item });
+      }
+    });
+  }
+
+  return [...acc.values()]
+    .sort((a, b) => b.rrfScore - a.rrfScore)
+    .slice(0, limit)
+    .map((entry) => ({ ...entry.result, score: entry.rrfScore }));
+}
+
+/**
+ * Main search function.
+ * When xdb is available: runs both xdb and fuzzy with at least RRF_MIN_FETCH results each,
+ * merges via RRF, then trims to the requested limit.
+ * Falls back to fuzzy-only when xdb is unavailable or fails.
+ * Never throws.
  */
 export async function search(
   query: string,
   index: RuntimeIndex,
-  options: { limit: number; minScore?: number },
+  options: { limit: number },
 ): Promise<SearchResult[]> {
   try {
-    let results: SearchResult[];
     if (index.meta.xdbAvailable) {
-      const xdbResults = await searchXdb(query, options.limit);
-      results = xdbResults ?? searchFuzzy(query, index, options.limit);
-    } else {
-      results = searchFuzzy(query, index, options.limit);
+      const fetchLimit = Math.max(options.limit, RRF_MIN_FETCH);
+      const [xdbResults, fuzzyResults] = await Promise.all([
+        searchXdb(query, fetchLimit),
+        Promise.resolve(searchFuzzy(query, index, fetchLimit)),
+      ]);
+
+      if (xdbResults) {
+        return rrfMerge([xdbResults, fuzzyResults], options.limit);
+      }
+      // xdb failed — fall through to fuzzy only
+      return fuzzyResults.slice(0, options.limit);
     }
-    if (options.minScore !== undefined) {
-      return results.filter((r) => r.score >= options.minScore!);
-    }
-    return results;
+
+    return searchFuzzy(query, index, options.limit);
   } catch {
     return searchFuzzy(query, index, options.limit);
   }
