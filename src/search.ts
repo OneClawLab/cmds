@@ -33,7 +33,7 @@ export function searchFuzzy(query: string, index: RuntimeIndex, limit: number): 
   return results.map((r) => ({
     name: r.obj.name,
     description: r.obj.description,
-    score: r.score === -Infinity ? 0 : r.score + 1000,
+    score: r.score,
     category: r.obj.category,
   }));
 }
@@ -74,18 +74,25 @@ export async function searchXdb(query: string, limit: number): Promise<SearchRes
 /**
  * Main search function. Prefers xdb semantic search when available, falls back to fuzzysort.
  * Never throws — catches all errors and falls back gracefully.
+ * @param minScore - optional minimum score threshold (0–1). Results below this are filtered out.
  */
 export async function search(
   query: string,
   index: RuntimeIndex,
-  options: { limit: number },
+  options: { limit: number; minScore?: number },
 ): Promise<SearchResult[]> {
   try {
+    let results: SearchResult[];
     if (index.meta.xdbAvailable) {
       const xdbResults = await searchXdb(query, options.limit);
-      if (xdbResults !== null) return xdbResults;
+      results = xdbResults ?? searchFuzzy(query, index, options.limit);
+    } else {
+      results = searchFuzzy(query, index, options.limit);
     }
-    return searchFuzzy(query, index, options.limit);
+    if (options.minScore !== undefined) {
+      return results.filter((r) => r.score >= options.minScore!);
+    }
+    return results;
   } catch {
     return searchFuzzy(query, index, options.limit);
   }
