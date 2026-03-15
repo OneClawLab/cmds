@@ -9,37 +9,64 @@ export class CommandNotFoundError extends Error {
 }
 
 /**
- * Try running `<command> --help` and extract the first non-empty paragraph.
- * Returns null on any failure.
+ * Extract the first non-empty paragraph from command output.
  */
-export async function helpFallback(command: string): Promise<string | null> {
-  try {
-    const { stdout, stderr } = await execCommand(command, ['--help']);
-    const output = stdout || stderr;
-    if (!output) return null;
+function extractFirstParagraph(output: string): string | null {
+  const lines = output.split('\n');
+  const paragraphLines: string[] = [];
+  let started = false;
 
-    const lines = output.split('\n');
-    const paragraphLines: string[] = [];
-    let started = false;
-
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (!started) {
-        if (trimmed.length > 0) {
-          started = true;
-          paragraphLines.push(trimmed);
-        }
-      } else {
-        if (trimmed.length === 0) break;
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!started) {
+      if (trimmed.length > 0) {
+        started = true;
         paragraphLines.push(trimmed);
       }
+    } else {
+      if (trimmed.length === 0) break;
+      paragraphLines.push(trimmed);
     }
+  }
 
-    const description = paragraphLines.join(' ').trim();
-    return description.length > 0 ? description : null;
-  } catch {
+  const result = paragraphLines.join(' ').trim();
+  return result.length > 0 ? result : null;
+}
+
+/**
+ * Capture output from a command, tolerating non-zero exit codes.
+ * Many commands write help to stderr and exit non-zero.
+ */
+async function captureOutput(command: string, args: string[]): Promise<string | null> {
+  try {
+    const { stdout, stderr } = await execCommand(command, args);
+    return stdout || stderr || null;
+  } catch (err) {
+    // execCommand throws on non-zero exit — extract output from the error
+    if (err && typeof err === 'object' && 'stdout' in err) {
+      const e = err as { stdout?: string; stderr?: string };
+      return e.stdout || e.stderr || null;
+    }
     return null;
   }
+}
+
+/**
+ * Try running `<command> --help`, then `<command>` with no args.
+ * Returns the first non-empty paragraph found, or null on total failure.
+ */
+export async function helpFallback(command: string): Promise<{ description: string; rawOutput: string } | null> {
+  for (const args of [['--help'], []]) {
+    const output = await captureOutput(command, args);
+    if (!output) continue;
+    const description = extractFirstParagraph(output);
+    if (description) return { description, rawOutput: output };
+  }
+  return null;
+}
+
+function hasSubstantiveContent(entry: CommandEntry): boolean {
+  return entry.description.trim().length > 0 || entry.examples.length > 0;
 }
 
 function entryToCommandInfo(entry: CommandEntry): CommandInfo {
@@ -63,8 +90,8 @@ function entryToCommandInfo(entry: CommandEntry): CommandInfo {
 /**
  * Resolve detailed info for a command.
  * 1. Confirm command exists in PATH — throw CommandNotFoundError if not.
- * 2. Look up in RuntimeIndex — return structured CommandInfo if found.
- * 3. Fall back to --help extraction — return minimal CommandInfo.
+ * 2. Look up in RuntimeIndex — if found AND has substantive content, return it.
+ * 3. Fall back to --help / no-args execution to extract description + raw usage.
  */
 export async function resolveInfo(
   command: string,
@@ -76,18 +103,30 @@ export async function resolveInfo(
   }
 
   const entry = index.commands.find((c) => c.name === command);
-  if (entry) {
+  if (entry && hasSubstantiveContent(entry)) {
     return entryToCommandInfo(entry);
   }
 
-  // Not in index — try --help fallback
-  const description = await helpFallback(command);
+  // Entry missing or empty — try live --help / no-args fallback
+  const fallback = await helpFallback(command);
+
+  // If we have an entry with at least a name, merge fallback description in
+  if (entry) {
+    const merged = entryToCommandInfo(entry);
+    if (fallback) {
+      if (!merged.description) merged.description = fallback.description;
+      if (merged.examples.length === 0) {
+        merged.examples = [{ description: 'Usage output', command: fallback.rawOutput.trim() }];
+      }
+    }
+    return merged;
+  }
 
   return {
     name: command,
-    description: description ?? '',
+    description: fallback?.description ?? '',
     useCases: [],
-    examples: [],
+    examples: fallback ? [{ description: 'Usage output', command: fallback.rawOutput.trim() }] : [],
     caveats: [],
   };
 }
