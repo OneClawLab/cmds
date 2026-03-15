@@ -1,6 +1,7 @@
 import { readdir } from 'node:fs/promises';
 import path from 'node:path';
-import { commandExists, execCommand } from './utils.js';
+import { commandExists, execCommand } from '../src/os-utils.js'
+import { spawnCommand } from './os-utils.js';
 import { saveRuntimeIndex } from './data.js';
 import { helpFallback } from './info.js';
 import { isEnrichSafe } from './safety.js';
@@ -152,28 +153,16 @@ async function ingestToXdb(commands: CommandEntry[]): Promise<void> {
 
   if (records.length === 0) return;
 
-  const { spawn } = await import('node:child_process');
   const BATCH_SIZE = 10;
 
   for (let i = 0; i < records.length; i += BATCH_SIZE) {
     const chunk = records.slice(i, i + BATCH_SIZE);
     const jsonl = chunk.map((r) => JSON.stringify(r)).join('\n');
-
-    await new Promise<void>((resolve) => {
-      try {
-        const proc = spawn('xdb', ['put', XDB_COLLECTION, '--batch'], {
-          stdio: ['pipe', 'pipe', 'pipe'],
-          windowsHide: true,
-          shell: process.platform === 'win32',
-        });
-        proc.stdin.write(jsonl);
-        proc.stdin.end();
-        proc.on('close', () => resolve());
-        proc.on('error', () => resolve());
-      } catch {
-        resolve();
-      }
-    });
+    try {
+      await spawnCommand('xdb', ['put', XDB_COLLECTION, '--batch'], jsonl);
+    } catch {
+      // best-effort — ignore failures
+    }
   }
 }
 

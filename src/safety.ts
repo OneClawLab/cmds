@@ -1,7 +1,4 @@
-import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
-
-const execFileAsync = promisify(execFile);
+import { execCommand } from './os-utils.js';
 
 /**
  * Commands that should never be executed for help extraction.
@@ -94,10 +91,9 @@ const SAFE_PATH_PREFIXES_UNIX: readonly string[] = [
  * Returns null if the command cannot be found.
  */
 export async function resolveCommandPath(command: string): Promise<string | null> {
-  const cmd = process.platform === 'win32' ? 'where' : 'which';
   try {
-    const { stdout } = await execFileAsync(cmd, [command], { timeout: 3000 });
-    // `where` on Windows may return multiple lines; take the first
+    // Always use `which` — bash is always available (even on Windows via Git Bash/MSYS2)
+    const { stdout } = await execCommand('which', [command], 3000);
     const firstLine = stdout.trim().split('\n')[0]?.trim();
     return firstLine || null;
   } catch {

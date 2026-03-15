@@ -2,13 +2,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { RuntimeIndex } from '../../src/types.js';
 
 // Mock utils before importing info module
-vi.mock('../../src/utils.js', () => ({
+vi.mock('../../src/os-utils.js', () => ({
   commandExists: vi.fn(),
   execCommand: vi.fn(),
 }));
 
 import { resolveInfo, helpFallback, CommandNotFoundError } from '../../src/info.js';
-import { commandExists, execCommand } from '../../src/utils.js';
+import { commandExists, execCommand } from '../../src/os-utils.js';
 
 const mockedCommandExists = vi.mocked(commandExists);
 const mockedExecCommand = vi.mocked(execCommand);

@@ -11,9 +11,9 @@
  */
 
 import { readFile, writeFile } from 'node:fs/promises';
-import { spawn } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { spawnCommand } from '../src/os-utils.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = path.resolve(__dirname, '..');
@@ -75,25 +75,7 @@ function parseCategories(output: string): Record<string, string> {
 }
 
 function runPai(args: string[], stdin?: string): Promise<{ stdout: string; stderr: string }> {
-  return new Promise((resolve, reject) => {
-    const child = spawn('pai', args, {
-      shell: true,
-      timeout: 120_000,
-      stdio: ['pipe', 'pipe', 'pipe'],
-    });
-    const chunks: Buffer[] = [];
-    const errChunks: Buffer[] = [];
-    child.stdout.on('data', (d: Buffer) => chunks.push(d));
-    child.stderr.on('data', (d: Buffer) => errChunks.push(d));
-    child.on('error', reject);
-    child.on('close', (code) => {
-      const stdout = Buffer.concat(chunks).toString('utf8');
-      const stderr = Buffer.concat(errChunks).toString('utf8');
-      if (code === 0) resolve({ stdout, stderr });
-      else reject(new Error(`pai exited with code ${code}: ${stderr}`));
-    });
-    if (stdin) { child.stdin.write(stdin); child.stdin.end(); }
-  });
+  return spawnCommand('pai', args, stdin, 120_000);
 }
 
 async function saveIndex(entries: TldrEntry[]): Promise<void> {
