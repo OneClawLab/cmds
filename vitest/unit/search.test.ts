@@ -14,10 +14,10 @@ function makeCommand(overrides: Partial<CommandEntry> = {}): CommandEntry {
   };
 }
 
-function makeIndex(commands: CommandEntry[], vdbAvailable = false): RuntimeIndex {
+function makeIndex(commands: CommandEntry[], xdbAvailable = false): RuntimeIndex {
   return {
     meta: {
-      vdbAvailable,
+      xdbAvailable,
       lastScanTime: new Date().toISOString(),
       systemInfo: { platform: 'linux', arch: 'x64', shell: '/bin/bash' },
     },
@@ -97,15 +97,15 @@ describe('search', () => {
     makeCommand({ name: 'grep', description: 'print lines matching patterns', category: 'text-processing' }),
   ];
 
-  it('falls back to fuzzysort when VDB is unavailable', async () => {
+  it('falls back to fuzzysort when XDB is unavailable', async () => {
     const index = makeIndex(commands, false);
     const results = await search('find', index, { limit: 5 });
     expect(results.length).toBeGreaterThan(0);
     expect(results.some((r) => r.name === 'find')).toBe(true);
   });
 
-  it('falls back to fuzzysort when VDB is available but fails', async () => {
-    // VDB is marked available but the vdb command doesn't exist, so it will fail and fallback
+  it('falls back to fuzzysort when XDB is available but fails', async () => {
+    // XDB is marked available but the xdb command doesn't exist, so it will fail and fallback
     const index = makeIndex(commands, true);
     const results = await search('find', index, { limit: 5 });
     expect(results.length).toBeGreaterThan(0);

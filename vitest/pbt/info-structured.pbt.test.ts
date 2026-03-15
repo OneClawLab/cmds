@@ -25,7 +25,7 @@ describe('Property 5: Info returns complete structured info', () => {
 
         const index: RuntimeIndex = {
           meta: {
-            vdbAvailable: false,
+            xdbAvailable: false,
             lastScanTime: new Date().toISOString(),
             systemInfo: { platform: 'linux', arch: 'x64', shell: '/bin/bash' },
           },

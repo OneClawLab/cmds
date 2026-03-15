@@ -72,14 +72,14 @@ export const arbTldrEntry: fc.Arbitrary<TldrEntry> = fc.record({
 
 /** RuntimeIndexMeta with valid ISO timestamp */
 export const arbRuntimeIndexMeta: fc.Arbitrary<RuntimeIndexMeta> = fc.record({
-  vdbAvailable: fc.boolean(),
+  xdbAvailable: fc.boolean(),
   lastScanTime: fc.date({ min: new Date('2020-01-01'), max: new Date('2030-01-01'), noInvalidDate: true }).map((d) =>
     d.toISOString(),
   ),
   systemInfo: fc.record({
     platform: fc.constantFrom('linux', 'darwin', 'win32'),
     arch: fc.constantFrom('x64', 'arm64'),
-    shell: fc.constantFrom('/bin/bash', '/bin/zsh', '/bin/sh', 'powershell.exe'),
+    shell: fc.constantFrom('/bin/bash', '/bin/zsh', '/bin/sh'),
   }),
 });
 

@@ -15,7 +15,7 @@
 - **Output_Formatter**: 输出格式化模块，根据 TTY 状态选择输出格式
 - **Runtime_Index**: 运行时索引，存储于 `~/.config/cmds/index.json`，包含当前系统已安装命令的元数据
 - **Tldr_Index**: 静态 tldr 全量索引，随包分发于 `dist/data/tldr-index.json`
-- **VDB**: 外部向量数据库命令，用于语义向量检索（可选依赖）
+- **XDB**: 外部向量数据库命令，用于语义向量检索（可选依赖）
 - **Fuzzysort**: 模糊匹配库，用于基于文本的模糊搜索
 - **TTY**: 终端设备，用于判断 stdout 是否为交互式终端
 
@@ -41,8 +41,8 @@
 1. WHEN 用户提交搜索查询, THE Search_Engine SHALL 返回按相关性排序的命令列表
 2. WHEN 用户指定 `--limit <n>` 参数, THE Search_Engine SHALL 返回最多 n 条结果
 3. WHEN 用户未指定 `--limit` 参数, THE Search_Engine SHALL 默认返回最多 5 条结果
-4. WHEN Runtime_Index 中记录 VDB 可用, THE Search_Engine SHALL 优先使用 VDB 进行向量检索
-5. WHEN VDB 不可用或调用出错, THE Search_Engine SHALL 静默回退到 Fuzzysort 模糊匹配
+4. WHEN Runtime_Index 中记录 XDB 可用, THE Search_Engine SHALL 优先使用 XDB 进行向量检索
+5. WHEN XDB 不可用或调用出错, THE Search_Engine SHALL 静默回退到 Fuzzysort 模糊匹配
 6. WHEN 使用 Fuzzysort 模糊匹配, THE Search_Engine SHALL 对命令的 name、description 和 examples 文本进行匹配
 7. WHEN 搜索无结果, THE CLI SHALL 以退出码 1 退出并告知用户无匹配结果
 
@@ -77,7 +77,7 @@
 1. WHEN 用户执行 `cmds scan`, THE Scanner SHALL 检测系统已安装的可执行命令
 2. WHEN 扫描检测到命令, THE Scanner SHALL 与 Tldr_Index 比对，筛选出本机实际安装的命令及其 metadata
 3. WHEN 本机存在但 Tldr_Index 中没有的命令, THE Scanner SHALL 尝试 `--help` 提取基本信息
-4. WHEN 扫描完成, THE Scanner SHALL 检测 VDB 命令可用性并记录到 Runtime_Index 中
+4. WHEN 扫描完成, THE Scanner SHALL 检测 XDB 命令可用性并记录到 Runtime_Index 中
 5. WHEN 扫描完成, THE Scanner SHALL 将结果写入 Runtime_Index（`~/.config/cmds/index.json`），包含 lastScanTime 和 systemInfo
 6. WHEN Runtime_Index 目录不存在, THE Scanner SHALL 自动创建 `~/.config/cmds/` 目录
 
@@ -101,7 +101,7 @@
 1. THE CLI SHALL 从 `dist/data/tldr-index.json` 加载静态 Tldr_Index 数据
 2. THE CLI SHALL 从 `~/.config/cmds/index.json` 加载 Runtime_Index 数据
 3. WHEN Runtime_Index 不存在, THE CLI SHALL 提示用户先运行 `cmds scan`
-4. THE Runtime_Index SHALL 包含 vdbAvailable（boolean）、lastScanTime（ISO 时间戳）和 systemInfo 元数据字段
+4. THE Runtime_Index SHALL 包含 xdbAvailable（boolean）、lastScanTime（ISO 时间戳）和 systemInfo 元数据字段
 5. WHEN 读取 Runtime_Index 文件失败（格式损坏等）, THE CLI SHALL 提示用户重新运行 `cmds scan`
 
 ### 需求 8: 退出码规范

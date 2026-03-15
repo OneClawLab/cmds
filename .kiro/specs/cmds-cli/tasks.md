@@ -49,8 +49,8 @@
 - [x] 5. 实现搜索引擎
   - [x] 5.1 安装 fuzzysort 依赖并实现 `src/search.ts`
     - 实现 searchFuzzy（基于 fuzzysort 匹配 name+description+examples）
-    - 实现 searchVdb（调用外部 vdb 命令，失败返回 null）
-    - 实现 search 主函数（VDB 优先，fallback 到 fuzzysort）
+    - 实现 searchXdb（调用外部 xdb 命令，失败返回 null）
+    - 实现 search 主函数（XDB 优先，fallback 到 fuzzysort）
     - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6_
 
   - [x]* 5.2 编写 search 属性测试 — 排序与 limit
@@ -91,7 +91,7 @@
   - [x] 9.1 实现 `src/scanner.ts`
     - 实现 detectCommands（优先 compgen -c，fallback 遍历 PATH）
     - 实现 mergeWithTldr（与 tldr 索引比对）
-    - 实现 checkVdbAvailability
+    - 实现 checkXdbAvailability
     - 实现 scan 主函数，组装 RuntimeIndex 并写入文件
     - 自动创建 `~/.config/cmds/` 目录
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6_

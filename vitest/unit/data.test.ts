@@ -81,7 +81,7 @@ describe('data layer', () => {
     it('saves and loads a RuntimeIndex correctly', async () => {
       const testIndex: RuntimeIndex = {
         meta: {
-          vdbAvailable: false,
+          xdbAvailable: false,
           lastScanTime: new Date().toISOString(),
           systemInfo: {
             platform: 'linux',
@@ -106,7 +106,7 @@ describe('data layer', () => {
       const loaded = await loadRuntimeIndex();
 
       expect(loaded).not.toBeNull();
-      expect(loaded!.meta.vdbAvailable).toBe(false);
+      expect(loaded!.meta.xdbAvailable).toBe(false);
       expect(loaded!.meta.systemInfo.platform).toBe('linux');
       expect(loaded!.commands).toHaveLength(1);
       expect(loaded!.commands[0]!.name).toBe('ls');

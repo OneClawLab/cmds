@@ -31,7 +31,7 @@ describe('Property 3: search results count <= limit', () => {
     await fc.assert(
       fc.asyncProperty(
         arbCommandName,
-        arbRuntimeIndex.map(idx => ({ ...idx, meta: { ...idx.meta, vdbAvailable: false } })),
+        arbRuntimeIndex.map(idx => ({ ...idx, meta: { ...idx.meta, xdbAvailable: false } })),
         fc.integer({ min: 1, max: 50 }),
         async (query, index, limit) => {
           const results = await search(query, index, { limit });

@@ -4,7 +4,7 @@
 
 `cmds` 是一个 Node.js CLI 工具，使用 TypeScript 编写，通过 tsup 构建为 ESM 格式。核心架构采用分层设计：输入解析层 → 智能路由层 → 功能模块层（搜索/信息/列表/扫描）→ 数据层 → 输出格式化层。
 
-工具依赖 commander 进行 CLI 参数解析，fuzzysort 进行模糊匹配，可选依赖外部 `vdb` 命令进行向量检索。数据分为静态 tldr 索引（随包分发）和运行时索引（用户本地生成）两层。
+工具依赖 commander 进行 CLI 参数解析，fuzzysort 进行模糊匹配，可选依赖外部 `xdb` 命令进行向量检索。数据分为静态 tldr 索引（随包分发）和运行时索引（用户本地生成）两层。
 
 ## 架构
 
@@ -18,7 +18,7 @@ graph TD
     B -->|精确匹配命令名| C
     B -->|非精确匹配| F[Search Engine]
     
-    F --> G[VDB Search]
+    F --> G[XDB Search]
     F --> H[Fuzzysort Search]
     G -->|失败或不可用| H
     
@@ -46,7 +46,7 @@ graph TD
 |------|------|------|
 | CLI Entry | `src/index.ts` | commander 配置、子命令注册、参数解析 |
 | Smart Router | `src/router.ts` | 判断 query 是命令名还是搜索意图 |
-| Search Engine | `src/search.ts` | VDB 向量检索 + fuzzysort 模糊匹配 |
+| Search Engine | `src/search.ts` | XDB 向量检索 + fuzzysort 模糊匹配 |
 | Info Resolver | `src/info.ts` | 命令详情查询、--help fallback |
 | List Aggregator | `src/list.ts` | 分类汇总、过滤 |
 | Scanner | `src/scanner.ts` | 系统命令扫描、索引生成 |
@@ -118,11 +118,11 @@ async function search(
   options: { limit: number }
 ): Promise<SearchResult[]>;
 
-async function searchVdb(query: string, limit: number): Promise<SearchResult[] | null>;
+async function searchXdb(query: string, limit: number): Promise<SearchResult[] | null>;
 function searchFuzzy(query: string, index: RuntimeIndex, limit: number): SearchResult[];
 ```
 
-搜索策略：先检查 `index.meta.vdbAvailable`，若为 true 则尝试 VDB 搜索。VDB 调用失败时静默 fallback 到 fuzzysort。fuzzysort 匹配对象为命令的 name + description + examples 拼接文本。
+搜索策略：先检查 `index.meta.xdbAvailable`，若为 true 则尝试 XDB 搜索。XDB 调用失败时静默 fallback 到 fuzzysort。fuzzysort 匹配对象为命令的 name + description + examples 拼接文本。
 
 ### Info Resolver (`src/info.ts`)
 
@@ -173,20 +173,20 @@ interface ScanResult {
   commandsFound: number;
   commandsWithTldr: number;
   commandsWithHelp: number;
-  vdbAvailable: boolean;
+  xdbAvailable: boolean;
   scanTime: string;
 }
 
 async function scan(tldrIndex: TldrIndex): Promise<ScanResult>;
 async function detectCommands(): Promise<string[]>;
-async function checkVdbAvailability(): Promise<boolean>;
+async function checkXdbAvailability(): Promise<boolean>;
 ```
 
 扫描流程：
 1. `detectCommands()`: 优先 `compgen -c`（bash），fallback 遍历 PATH 目录
 2. 与 tldr 索引比对，提取匹配命令的 metadata
 3. 对无 tldr 数据的命令尝试 `--help`
-4. 检测 VDB 可用性
+4. 检测 XDB 可用性
 5. 写入 `~/.config/cmds/index.json`
 
 ### Output Formatter (`src/formatter.ts`)
@@ -261,7 +261,7 @@ interface CommandEntry {
 }
 
 interface RuntimeIndexMeta {
-  vdbAvailable: boolean;
+  xdbAvailable: boolean;
   lastScanTime: string;  // ISO 8601
   systemInfo: {
     platform: string;
@@ -356,7 +356,7 @@ interface CommandInfo {
 
 ### Property 9: Runtime Index 序列化 round-trip
 
-*For any* 合法的 RuntimeIndex 对象（包含 meta.vdbAvailable、meta.lastScanTime、meta.systemInfo 和 commands 数组），序列化为 JSON 后再反序列化应产生等价的对象。
+*For any* 合法的 RuntimeIndex 对象（包含 meta.xdbAvailable、meta.lastScanTime、meta.systemInfo 和 commands 数组），序列化为 JSON 后再反序列化应产生等价的对象。
 
 **Validates: Requirements 5.5, 7.4**
 
@@ -378,7 +378,7 @@ interface CommandInfo {
 | Runtime_Index 不存在 | 提示运行 `cmds scan` | 1 |
 | Runtime_Index 损坏 | 提示重新运行 `cmds scan` | 1 |
 | Tldr_Index 加载失败 | 输出错误信息并以退出码 1 退出 | 1 |
-| VDB 调用失败 | 静默 fallback 到 fuzzysort，不输出错误 | - |
+| XDB 调用失败 | 静默 fallback 到 fuzzysort，不输出错误 | - |
 | `--help` fallback 失败 | 返回基本信息（仅 name），不报错 | 0 |
 
 错误输出统一写入 stderr，正常输出写入 stdout。
@@ -412,7 +412,7 @@ interface CommandInfo {
 单元测试聚焦于：
 - 具体示例验证（如 `cmds info find` 的预期输出结构）
 - 边界情况（空索引、空查询、不存在的分类）
-- 错误条件（命令不存在、索引损坏、VDB 失败 fallback）
+- 错误条件（命令不存在、索引损坏、XDB 失败 fallback）
 - CLI 参数解析集成测试
 
 ### 测试文件组织

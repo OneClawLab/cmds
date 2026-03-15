@@ -16,7 +16,7 @@ const mockedExecCommand = vi.mocked(execCommand);
 function makeIndex(commands: Array<{ name: string; description: string; category?: string; tags?: string[] }>): RuntimeIndex {
   return {
     meta: {
-      vdbAvailable: false,
+      xdbAvailable: false,
       lastScanTime: new Date().toISOString(),
       systemInfo: { platform: 'linux', arch: 'x64', shell: '/bin/bash' },
     },

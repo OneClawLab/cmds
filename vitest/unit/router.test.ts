@@ -5,7 +5,7 @@ import type { RuntimeIndex } from '../../src/types.js';
 function makeIndex(commandNames: string[]): RuntimeIndex {
   return {
     meta: {
-      vdbAvailable: false,
+      xdbAvailable: false,
       lastScanTime: new Date().toISOString(),
       systemInfo: { platform: 'linux', arch: 'x64', shell: '/bin/bash' },
     },

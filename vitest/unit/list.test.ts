@@ -17,7 +17,7 @@ function makeEntry(overrides: Partial<CommandEntry> & { name: string }): Command
 function makeIndex(commands: CommandEntry[]): RuntimeIndex {
   return {
     meta: {
-      vdbAvailable: false,
+      xdbAvailable: false,
       lastScanTime: new Date().toISOString(),
       systemInfo: { platform: 'linux', arch: 'x64', shell: '/bin/bash' },
     },
