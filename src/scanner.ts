@@ -3,6 +3,7 @@ import path from 'node:path';
 import { commandExists, execCommand } from './utils.js';
 import { saveRuntimeIndex } from './data.js';
 import { helpFallback } from './info.js';
+import { isEnrichSafe } from './safety.js';
 import type {
   TldrIndex,
   CommandEntry,
@@ -175,32 +176,44 @@ async function ingestToXdb(commands: CommandEntry[]): Promise<void> {
   }
 }
 
-const HELP_FALLBACK_LIMIT = 20;
-
 /**
  * Main scan function.
  * 1. Detect installed commands via PATH scanning
  * 2. Merge with tldr index
- * 3. Try --help for a limited batch of unknown commands
+ * 3. If enrich=true, try --help/-h for unknown commands (with safety checks)
  * 4. Check xdb availability
  * 5. Build and save RuntimeIndex
  * 6. Return ScanResult summary
  */
-export async function scan(tldrIndex: TldrIndex): Promise<ScanResult> {
+export async function scan(
+  tldrIndex: TldrIndex,
+  options: { enrich?: boolean; onProgress?: (current: number, total: number, name: string) => void } = {},
+): Promise<ScanResult> {
   const detected = await detectCommands();
   const commands = mergeWithTldr(detected, tldrIndex);
 
-  // Try --help for a limited number of unknown-source commands
-  const unknowns = commands.filter((c) => c.source === 'unknown');
-  const batch = unknowns.slice(0, HELP_FALLBACK_LIMIT);
   let commandsWithHelp = 0;
+  let commandsSkipped = 0;
 
-  for (const cmd of batch) {
-    const desc = await helpFallback(cmd.name);
-    if (desc) {
-      cmd.description = desc;
-      cmd.source = 'help';
-      commandsWithHelp++;
+  if (options.enrich) {
+    const unknowns = commands.filter((c) => c.source === 'unknown');
+    const total = unknowns.length;
+    for (let i = 0; i < unknowns.length; i++) {
+      const cmd = unknowns[i]!;
+      options.onProgress?.(i + 1, total, cmd.name);
+
+      const safety = await isEnrichSafe(cmd.name);
+      if (!safety.safe) {
+        commandsSkipped++;
+        continue;
+      }
+
+      const result = await helpFallback(cmd.name, 3000);
+      if (result) {
+        cmd.description = result.description;
+        cmd.source = 'help';
+        commandsWithHelp++;
+      }
     }
   }
 
@@ -233,6 +246,7 @@ export async function scan(tldrIndex: TldrIndex): Promise<ScanResult> {
     commandsFound: commands.length,
     commandsWithTldr: commands.filter((c) => c.source === 'tldr').length,
     commandsWithHelp,
+    commandsSkipped,
     xdbAvailable,
     scanTime: runtimeIndex.meta.lastScanTime,
   };

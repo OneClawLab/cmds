@@ -138,6 +138,7 @@ export function formatScanResult(result: ScanResult): string {
     `- Commands found: ${result.commandsFound}`,
     `- With tldr data: ${result.commandsWithTldr}`,
     `- With help text: ${result.commandsWithHelp}`,
+    `- Skipped (unsafe): ${result.commandsSkipped}`,
     `- xdb available: ${result.xdbAvailable ? 'yes' : 'no'}`,
     `- Scan time: ${result.scanTime}`,
   ];

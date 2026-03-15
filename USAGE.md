@@ -17,7 +17,7 @@ npm link   # 全局安装 cmds 命令
 cmds scan
 
 # 用自然语言搜索命令
-cmds "find large files"
+cmds find "find large files"
 
 # 查看某个命令的详细信息
 cmds info find
@@ -31,25 +31,19 @@ cmds list --category filesystem
 
 ## 命令详解
 
-### 智能路由（默认命令）
+### `cmds find <query>`
 
-直接输入 `cmds <query>`，系统会自动判断意图：
-
-- 如果 query 精确匹配已知命令名 → 显示该命令详情
-- 否则 → 执行语义搜索
+用自然语言搜索相关命令。
 
 ```bash
-# 精确匹配 → 显示 grep 详情
-cmds grep
-
-# 非精确匹配 → 搜索相关命令
-cmds "search text in files"
+# 搜索相关命令
+cmds find "search text in files"
 
 # 限制返回结果数量（默认 5）
-cmds "compress files" --limit 3
+cmds find "compress files" --limit 3
 
 # JSON 输出（适合脚本和 LLM Agent）
-cmds "network tools" --json
+cmds find "network tools" --json
 ```
 
 ### `cmds info <command>`
@@ -63,7 +57,7 @@ cmds info curl --json
 
 - 命令必须在系统 PATH 中存在
 - 优先从运行时索引获取 tldr 数据
-- 索引中无数据时，自动尝试 `--help` 提取描述
+- 索引中无数据或数据为空（description 为空且无 examples）时，自动尝试 `--help` / `-h` / 不带参数运行提取描述
 - 命令不存在时退出码为 1
 
 ### `cmds list`
@@ -87,15 +81,18 @@ cmds list --category filesystem --json
 
 ```bash
 cmds scan
+cmds scan --enrich        # 对无信息命令额外采集描述
 cmds scan --json
+cmds scan --enrich --json
 ```
 
 扫描流程：
 1. 遍历 PATH 目录，检测所有可执行文件
 2. 与内置 tldr 索引比对，提取匹配命令的元数据
-3. 对部分未匹配命令尝试 `--help` 提取描述
-4. 检测 xdb（向量数据库）可用性
-5. 写入索引到 `~/.config/cmds/index.json`
+3. 检测 xdb（向量数据库）可用性
+4. 写入索引到 `~/.config/cmds/index.json`
+
+`--enrich` 模式会额外对所有无 tldr 数据的命令依次尝试 `--help` / `-h` / 不带参数运行，提取描述信息。PATH 中命令数量多时耗时较长，按需使用。
 
 首次使用或安装新软件后建议重新扫描。
 
@@ -145,10 +142,10 @@ xdb 不可用或调用失败时自动静默回退到模糊匹配。
 
 ```bash
 # 找压缩相关命令
-cmds "compress and decompress"
+cmds find "compress and decompress"
 
 # 查看 curl 怎么用
-cmds curl
+cmds info curl
 
 # 列出所有网络工具
 cmds list --category network
@@ -157,5 +154,5 @@ cmds list --category network
 cmds list --category filesystem --json | jq '.[].name'
 
 # 搜索并取第一个结果
-cmds "disk usage" --limit 1 --json | jq '.[0].name'
+cmds find "disk usage" --limit 1 --json | jq '.[0].name'
 ```

@@ -84,6 +84,7 @@ describe('format', () => {
       commandsFound: 100,
       commandsWithTldr: 80,
       commandsWithHelp: 15,
+      commandsSkipped: 0,
       xdbAvailable: true,
       scanTime: '2024-01-01T00:00:00Z',
     };
@@ -196,6 +197,7 @@ describe('formatScanResult', () => {
       commandsFound: 50,
       commandsWithTldr: 40,
       commandsWithHelp: 8,
+      commandsSkipped: 3,
       xdbAvailable: false,
       scanTime: '2024-06-01T12:00:00Z',
     };
@@ -204,6 +206,7 @@ describe('formatScanResult', () => {
     expect(output).toContain('Commands found: 50');
     expect(output).toContain('With tldr data: 40');
     expect(output).toContain('With help text: 8');
+    expect(output).toContain('Skipped (unsafe): 3');
     expect(output).toContain('xdb available: no');
     expect(output).toContain('Scan time: 2024-06-01T12:00:00Z');
   });

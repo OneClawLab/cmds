@@ -1,4 +1,5 @@
 import { commandExists, execCommand } from './utils.js';
+import { isHelpLikeOutput } from './safety.js';
 import type { CommandInfo, RuntimeIndex, CommandEntry } from './types.js';
 
 export class CommandNotFoundError extends Error {
@@ -36,10 +37,11 @@ function extractFirstParagraph(output: string): string | null {
 /**
  * Capture output from a command, tolerating non-zero exit codes.
  * Many commands write help to stderr and exit non-zero.
+ * timeout defaults to 3000ms — callers can override for enrich scenarios.
  */
-async function captureOutput(command: string, args: string[]): Promise<string | null> {
+async function captureOutput(command: string, args: string[], timeoutMs = 3000): Promise<string | null> {
   try {
-    const { stdout, stderr } = await execCommand(command, args);
+    const { stdout, stderr } = await execCommand(command, args, timeoutMs);
     return stdout || stderr || null;
   } catch (err) {
     // execCommand throws on non-zero exit — extract output from the error
@@ -52,13 +54,18 @@ async function captureOutput(command: string, args: string[]): Promise<string | 
 }
 
 /**
- * Try running `<command> --help`, then `<command>` with no args.
+ * Try running `<command> --help`, then `-h`.
+ * No-args execution is intentionally omitted — too many commands have
+ * side effects when run without arguments (GUI launch, daemon start, etc.).
+ * Output is validated to look like genuine help text before accepting.
  * Returns the first non-empty paragraph found, or null on total failure.
+ * timeoutMs applies per attempt.
  */
-export async function helpFallback(command: string): Promise<{ description: string; rawOutput: string } | null> {
-  for (const args of [['--help'], []]) {
-    const output = await captureOutput(command, args);
+export async function helpFallback(command: string, timeoutMs = 3000): Promise<{ description: string; rawOutput: string } | null> {
+  for (const args of [['--help'], ['-h']]) {
+    const output = await captureOutput(command, args, timeoutMs);
     if (!output) continue;
+    if (!isHelpLikeOutput(output)) continue;
     const description = extractFirstParagraph(output);
     if (description) return { description, rawOutput: output };
   }

@@ -85,7 +85,8 @@ describe('resolveInfo', () => {
     expect(info.name).toBe('sometool');
     expect(info.description).toBe('A useful tool for doing things');
     expect(info.useCases).toEqual([]);
-    expect(info.examples).toEqual([]);
+    expect(info.examples).toHaveLength(1);
+    expect(info.examples[0]!.description).toBe('Usage output');
     expect(info.caveats).toEqual([]);
   });
 
@@ -129,7 +130,9 @@ describe('helpFallback', () => {
     });
 
     const result = await helpFallback('sometool');
-    expect(result).toBe('This is a tool that does things');
+    expect(result).not.toBeNull();
+    expect(result!.description).toBe('This is a tool that does things');
+    expect(result!.rawOutput).toContain('Usage: tool [options]');
   });
 
   it('returns null when command execution fails', async () => {
@@ -148,21 +151,33 @@ describe('helpFallback', () => {
 
   it('skips leading blank lines', async () => {
     mockedExecCommand.mockResolvedValue({
-      stdout: '\n\n  \nActual description here\n\nMore stuff',
+      stdout: '\n\n  \nActual description here\n\nUsage: tool --help',
       stderr: '',
     });
 
     const result = await helpFallback('tool');
-    expect(result).toBe('Actual description here');
+    expect(result).not.toBeNull();
+    expect(result!.description).toBe('Actual description here');
   });
 
   it('falls back to stderr when stdout is empty', async () => {
     mockedExecCommand.mockResolvedValue({
       stdout: '',
-      stderr: 'Help from stderr\n\nUsage info',
+      stderr: 'Help from stderr\n\nUsage info --option',
     });
 
     const result = await helpFallback('tool');
-    expect(result).toBe('Help from stderr');
+    expect(result).not.toBeNull();
+    expect(result!.description).toBe('Help from stderr');
+  });
+
+  it('rejects output that does not look like help text', async () => {
+    mockedExecCommand.mockResolvedValue({
+      stdout: 'starting server on port 8080 ready to accept connections now',
+      stderr: '',
+    });
+
+    const result = await helpFallback('tool');
+    expect(result).toBeNull();
   });
 });

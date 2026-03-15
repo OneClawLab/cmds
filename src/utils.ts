@@ -21,13 +21,16 @@ export async function commandExists(name: string): Promise<boolean> {
 /**
  * Execute an external command and capture its output.
  * Throws on non-zero exit code or timeout.
+ * Uses SIGKILL to ensure the process is forcibly terminated on timeout.
  */
 export async function execCommand(
   command: string,
   args: string[] = [],
+  timeoutMs = 5000,
 ): Promise<{ stdout: string; stderr: string }> {
   const { stdout, stderr } = await execFileAsync(command, args, {
-    timeout: 5000,
+    timeout: timeoutMs,
+    killSignal: 'SIGKILL',
     maxBuffer: 1024 * 1024,
     windowsHide: true,
   });

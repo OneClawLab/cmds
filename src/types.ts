@@ -89,6 +89,7 @@ export interface ScanResult {
   commandsFound: number;
   commandsWithTldr: number;
   commandsWithHelp: number;
+  commandsSkipped: number;
   xdbAvailable: boolean;
   scanTime: string;
 }

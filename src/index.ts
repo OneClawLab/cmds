@@ -154,8 +154,9 @@ addSubcommandExamples(listCmd, 'list');
 const scanCmd = program
   .command('scan')
   .description('Scan system for installed commands')
+  .option('--enrich', 'run --help/-h on unknown commands to collect descriptions')
   .option('--json', 'JSON output')
-  .action(async (opts: { json?: boolean }) => {
+  .action(async (opts: { enrich?: boolean; json?: boolean }) => {
     const json = shouldOutputJson(!!opts.json);
 
     try {
@@ -163,11 +164,18 @@ const scanCmd = program
       try {
         tldrIndex = await loadTldrIndex();
       } catch {
-        // tldr index not yet generated — scan still works, just no tldr metadata
         process.stderr.write('Warning: tldr index not found, scanning without tldr metadata.\n');
         tldrIndex = [];
       }
-      const result = await scan(tldrIndex);
+      const isTty = !opts.json && process.stderr.isTTY;
+      const scanOpts: Parameters<typeof scan>[1] = { enrich: !!opts.enrich };
+      if (opts.enrich && isTty) {
+        scanOpts.onProgress = (current, total, name) => {
+          process.stderr.write(`\renrich [${current}/${total}] ${name}`.padEnd(60));
+        };
+      }
+      const result = await scan(tldrIndex, scanOpts);
+      if (opts.enrich && isTty) process.stderr.write('\n');
       process.stdout.write(format(result, { json }) + '\n');
       process.exitCode = 0;
     } catch (err) {
