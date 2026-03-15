@@ -122,12 +122,13 @@ async function ensureXdbCollection(): Promise<boolean> {
 
 /**
  * Build the xdb record content string from a CommandEntry.
- * Concatenates name, description, and example texts for embedding.
+ * Only uses name and description to keep content concise for embedding.
  */
 function buildXdbContent(cmd: CommandEntry): string {
   const parts = [cmd.name, cmd.description];
-  for (const ex of cmd.examples) {
-    parts.push(ex.description, ex.command);
+  // Add only first 10 example descriptions (not commands) to keep size manageable
+  for (const ex of cmd.examples.slice(0, 10)) {
+    if (ex.description) parts.push(ex.description);
   }
   return parts.filter(Boolean).join(' ');
 }
@@ -151,28 +152,28 @@ async function ingestToXdb(commands: CommandEntry[]): Promise<void> {
 
   if (records.length === 0) return;
 
-  const { execFile } = await import('node:child_process');
-  const { promisify } = await import('node:util');
-  const execFileAsync = promisify(execFile);
-
-  const BATCH_SIZE = 100;
+  const { spawn } = await import('node:child_process');
+  const BATCH_SIZE = 10;
 
   for (let i = 0; i < records.length; i += BATCH_SIZE) {
     const chunk = records.slice(i, i + BATCH_SIZE);
     const jsonl = chunk.map((r) => JSON.stringify(r)).join('\n');
 
-    try {
-      const child = execFileAsync('xdb', ['put', XDB_COLLECTION, '--batch'], {
-        timeout: 60_000,
-        maxBuffer: 10 * 1024 * 1024,
-        windowsHide: true,
-      });
-      child.child.stdin?.write(jsonl);
-      child.child.stdin?.end();
-      await child;
-    } catch {
-      // Silently fail — xdb ingestion is best-effort
-    }
+    await new Promise<void>((resolve) => {
+      try {
+        const proc = spawn('xdb', ['put', XDB_COLLECTION, '--batch'], {
+          stdio: ['pipe', 'pipe', 'pipe'],
+          windowsHide: true,
+          shell: process.platform === 'win32',
+        });
+        proc.stdin.write(jsonl);
+        proc.stdin.end();
+        proc.on('close', () => resolve());
+        proc.on('error', () => resolve());
+      } catch {
+        resolve();
+      }
+    });
   }
 }
 

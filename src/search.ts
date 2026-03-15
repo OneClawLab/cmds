@@ -44,16 +44,24 @@ export function searchFuzzy(query: string, index: RuntimeIndex, limit: number): 
  */
 export async function searchXdb(query: string, limit: number): Promise<SearchResult[] | null> {
   try {
-    const { execFile } = await import('node:child_process');
-    const { promisify } = await import('node:util');
-    const execFileAsync = promisify(execFile);
+    const { spawn } = await import('node:child_process');
 
-    const child = execFileAsync(
-      'xdb',
-      ['find', 'cmds', query, '--similar', '--limit', String(limit)],
-      { timeout: 10_000, maxBuffer: 1024 * 1024, windowsHide: true },
-    );
-    const { stdout } = await child;
+    const stdout = await new Promise<string>((resolve, reject) => {
+      const proc = spawn(
+        'xdb',
+        ['find', 'cmds', '--similar', '--limit', String(limit), '--json'],
+        { stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true, shell: process.platform === 'win32' },
+      );
+      let out = '';
+      proc.stdout.on('data', (d: Buffer) => { out += d.toString(); });
+      proc.on('close', (code) => {
+        if (code === 0 || out.trim().length > 0) resolve(out);
+        else reject(new Error(`xdb exited with code ${code}`));
+      });
+      proc.on('error', reject);
+      proc.stdin.write(query);
+      proc.stdin.end();
+    });
 
     // xdb outputs JSONL — one JSON object per line
     const lines = stdout.trim().split('\n').filter((l) => l.trim().length > 0);
