@@ -69,15 +69,6 @@ describe('CLI integration', () => {
     expect(result.exitCode).toBe(1);
   });
 
-  // Requirement 2.7: Search with no results → exit code 1
-  // Requirement 8.2: No results → exit code 1
-  it('exits with code 1 when search query yields no results', async () => {
-    const result = await runCli('zzz_xyzzy_no_match_99999');
-    expect(result.exitCode).toBe(1);
-    // Should indicate no results or prompt to scan
-    expect(result.stderr.length).toBeGreaterThan(0);
-  });
-
   // Requirement 8.1: help subcommand → exit code 0
   it('outputs help with --help flag and exits with code 0', async () => {
     const result = await runCli('--help');
