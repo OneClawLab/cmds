@@ -17,23 +17,16 @@
 
 ## 3. 子命令
 
-### A. 语义搜索: `cmds <query>`
-
-当输入非特定命令名的字符串时，触发语义搜索。
+### A. 语义搜索: `cmds find <query>`
 
 ```
-cmds [options] <query>
-cmds "how to convert mp4 to gif"
-cmds "find large files" --limit 10
+cmds find <query>
+cmds find "how to convert mp4 to gif"
+cmds find "find large files" --limit 10
 ```
 
 - `--limit <n>`: 返回结果数量，默认 5。
 - `--json`: JSON 格式输出。
-
-**智能路由**:
-- 若 `<query>` 精确匹配某个已知命令名（在运行时索引中），自动走 info 逻辑。
-- 否则走搜索逻辑。
-- `cmds info <command>` 作为显式写法始终可用。
 
 **搜索策略（双层）**:
 1. 当系统中存在 `xdb` 命令（意图驱动数据中心，独立 repo）时，使用 Embedding + 向量检索。
@@ -227,11 +220,10 @@ cmds scan --json
 
 ### 人类使用
 ```bash
-$ cmds "find large files over 100MB"
+$ cmds find "find large files over 100MB"
 # → 返回 top 5 相关命令及简介
 
-$ cmds tar
-# → 精确匹配，自动走 info 逻辑
+$ cmds find "compress a directory" --json --limit 3
 
 $ cmds info find
 # → 显式 info 查询
@@ -248,7 +240,6 @@ $ cmds scan
 
 ### LLM Agent 调用
 ```bash
-$ cmds "compress a directory" --json --limit 3
 $ cmds info tar --json
 $ cmds list --category archive --json
 $ cmds scan --json

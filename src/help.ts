@@ -4,8 +4,8 @@ import type { Command } from 'commander';
 
 const MAIN_EXAMPLES = `
 Examples:
-  $ cmds "find large files"                           # 自然语言搜索
-  $ cmds grep                                         # 精确匹配 → 显示详情
+  $ cmds find "find large files"                      # 自然语言搜索
+  $ cmds find "compress a directory" --limit 3        # 限制结果数量
   $ cmds info tar                                     # 查看命令详情
   $ cmds list --category network                      # 按分类浏览
   $ cmds scan                                         # 扫描系统命令
@@ -34,6 +34,12 @@ Exit Codes:
   0  操作成功
   1  命令未找到 / 搜索无结果 / 分类不存在
   2  参数错误`;
+
+const FIND_EXAMPLES = `
+Examples:
+  $ cmds find "find large files"                      # 自然语言搜索
+  $ cmds find "compress a directory" --limit 3        # 限制结果数量
+  $ cmds find "list network interfaces" --json        # JSON 输出`;
 
 const INFO_EXAMPLES = `
 Examples:
@@ -66,6 +72,7 @@ export function installHelp(program: Command): void {
 
 export function addSubcommandExamples(cmd: Command, name: string): void {
   const examples: Record<string, string> = {
+    'find': FIND_EXAMPLES,
     'info': INFO_EXAMPLES,
     'list': LIST_EXAMPLES,
     'scan': SCAN_EXAMPLES,

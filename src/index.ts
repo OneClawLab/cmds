@@ -13,7 +13,6 @@ process.stderr.on('error', (err: NodeJS.ErrnoException) => {
   throw err;
 });
 
-import { routeQuery } from './router.js';
 import { search } from './search.js';
 import { resolveInfo, CommandNotFoundError } from './info.js';
 import { listSummary, listByCategory, CategoryNotFoundError } from './list.js';
@@ -47,18 +46,20 @@ program.configureOutput({
 // Install help system
 installHelp(program);
 
-// --- Default command (smart router) ---
-program
-  .argument('[query]', 'search query or command name')
+// --- Default action: show help ---
+program.action(() => {
+  program.outputHelp();
+  process.exitCode = 0;
+});
+
+// --- find subcommand ---
+const findCmd = program
+  .command('find <query>')
+  .description('Search for commands by natural language query')
   .option('--limit <n>', 'max results', '5')
   .option('--json', 'JSON output')
-  .action(async (query: string | undefined, opts: { limit: string; json?: boolean }) => {
-    if (!query) {
-      program.outputHelp();
-      process.exitCode = 0;
-      return;
-    }
-
+  .showHelpAfterError(true)
+  .action(async (query: string, opts: { limit: string; json?: boolean }) => {
     const json = shouldOutputJson(!!opts.json);
 
     const index = await loadRuntimeIndex();
@@ -68,33 +69,17 @@ program
       return;
     }
 
-    const route = routeQuery(query, index);
-
-    if (route.type === 'info') {
-      try {
-        const info = await resolveInfo(query, index);
-        process.stdout.write(format(info, { json }) + '\n');
-        process.exitCode = 0;
-      } catch (err) {
-        if (err instanceof CommandNotFoundError) {
-          process.stderr.write(err.message + '\n');
-          process.exitCode = 1;
-        } else {
-          process.stderr.write(`Error: ${err instanceof Error ? err.message : String(err)}\n`);
-          process.exitCode = 1;
-        }
-      }
-    } else {
-      const results = await search(query, index, { limit: parseInt(opts.limit, 10) || 5 });
-      if (results.length === 0) {
-        process.stderr.write(`No results found for: ${query}\n`);
-        process.exitCode = 1;
-        return;
-      }
-      process.stdout.write(format(results, { json }) + '\n');
-      process.exitCode = 0;
+    const results = await search(query, index, { limit: parseInt(opts.limit, 10) || 5 });
+    if (results.length === 0) {
+      process.stderr.write(`No results found for: ${query}\n`);
+      process.exitCode = 1;
+      return;
     }
+    process.stdout.write(format(results, { json }) + '\n');
+    process.exitCode = 0;
   });
+
+addSubcommandExamples(findCmd, 'find');
 
 // --- info subcommand ---
 const infoCmd = program
