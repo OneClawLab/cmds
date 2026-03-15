@@ -10,6 +10,7 @@ const PREDEFINED_CATEGORIES = [
   'network',
   'shell',
   'other',
+  'unknown',
 ] as const;
 
 export class CategoryNotFoundError extends Error {
@@ -27,7 +28,7 @@ export function listSummary(index: RuntimeIndex): ListSummary {
   const grouped = new Map<string, CommandEntry[]>();
 
   for (const cmd of index.commands) {
-    const cat = cmd.category || 'other';
+    const cat = cmd.category || 'unknown';
     const list = grouped.get(cat);
     if (list) {
       list.push(cmd);

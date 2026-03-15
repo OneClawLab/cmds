@@ -75,7 +75,7 @@ export function mergeWithTldr(
     return {
       name,
       description: '',
-      category: 'other',
+      category: 'unknown',
       examples: [],
       source: 'unknown',
       aliases: [],
@@ -214,6 +214,13 @@ export async function scan(
         cmd.source = 'help';
         commandsWithHelp++;
       }
+    }
+  }
+
+  // Reclassify commands that still have no substantive info into 'unknown' category
+  for (const cmd of commands) {
+    if (!cmd.description && cmd.examples.length === 0 && cmd.category !== 'unknown') {
+      cmd.category = 'unknown';
     }
   }
 

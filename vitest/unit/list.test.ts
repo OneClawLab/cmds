@@ -95,15 +95,15 @@ describe('listSummary', () => {
     expect(summary.categories).toEqual([]);
   });
 
-  it('treats commands with empty category as "other"', () => {
+  it('treats commands with empty category as "unknown"', () => {
     const index = makeIndex([
       makeEntry({ name: 'mystery', category: '' }),
     ]);
 
     const summary = listSummary(index);
-    const otherCat = summary.categories.find((c) => c.name === 'other');
-    expect(otherCat).toBeDefined();
-    expect(otherCat!.count).toBe(1);
+    const unknownCat = summary.categories.find((c) => c.name === 'unknown');
+    expect(unknownCat).toBeDefined();
+    expect(unknownCat!.count).toBe(1);
   });
 });
 

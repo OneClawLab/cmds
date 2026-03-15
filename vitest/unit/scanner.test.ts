@@ -42,7 +42,7 @@ describe('scanner', () => {
       expect(result).toHaveLength(2);
       for (const entry of result) {
         expect(entry.source).toBe('unknown');
-        expect(entry.category).toBe('other');
+        expect(entry.category).toBe('unknown');
         expect(entry.description).toBe('');
         expect(entry.examples).toEqual([]);
         expect(entry.aliases).toEqual([]);

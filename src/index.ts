@@ -32,6 +32,7 @@ program
   .name('cmds')
   .description('cmds - Discover linux commands for human and AI')
   .version(`cmds ${packageJson.version}`)
+  .argument('[query...]', 'search query (implicit find)')
   .showHelpAfterError(true);
 
 // Configure commander to exit with code 2 on argument/usage errors
@@ -46,10 +47,32 @@ program.configureOutput({
 // Install help system
 installHelp(program);
 
-// --- Default action: show help ---
-program.action(() => {
-  program.outputHelp();
-  process.exitCode = 0;
+// --- Default action: treat bare args as implicit `find`, else show help ---
+program.action(async (queryParts: string[]) => {
+  if (queryParts.length > 0) {
+    // Treat as implicit search query
+    const query = queryParts.join(' ');
+    const json = shouldOutputJson(false);
+
+    const index = await loadRuntimeIndex();
+    if (!index) {
+      process.stderr.write('No runtime index found. Run `cmds scan` first.\n');
+      process.exitCode = 1;
+      return;
+    }
+
+    const results = await search(query, index, { limit: 5 });
+    if (results.length === 0) {
+      process.stderr.write(`No results found for: ${query}\n`);
+      process.exitCode = 1;
+      return;
+    }
+    process.stdout.write(format(results, { json }) + '\n');
+    process.exitCode = 0;
+  } else {
+    program.outputHelp();
+    process.exitCode = 0;
+  }
 });
 
 // --- find subcommand ---

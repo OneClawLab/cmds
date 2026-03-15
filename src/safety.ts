@@ -41,6 +41,9 @@ const SKIP_LIST = new Set([
   'mmc', 'regedit', 'control', 'msconfig', 'devmgmt',
   'write', 'wordpad', 'charmap', 'snippingtool',
 
+  // OTHERS: 
+  'AppHostNameRegistrationVerifier', 'Fondue',
+
   // --- Package managers (may auto-install/update) ---
   'apt', 'apt-get', 'dpkg', 'yum', 'dnf', 'pacman', 'zypper',
   'snap', 'flatpak', 'brew',

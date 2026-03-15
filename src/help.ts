@@ -52,7 +52,7 @@ Examples:
   $ cmds list --category network                      # 按分类过滤
   $ cmds list --category filesystem --json            # JSON 输出
 
-Categories: filesystem, text-processing, search, archive, process, system, network, shell, other`;
+Categories: filesystem, text-processing, search, archive, process, system, network, shell, other, unknown`;
 
 const SCAN_EXAMPLES = `
 Examples:

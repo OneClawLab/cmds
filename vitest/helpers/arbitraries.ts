@@ -19,6 +19,7 @@ const CATEGORIES = [
   'network',
   'shell',
   'other',
+  'unknown',
 ] as const;
 
 // --- Primitives ---
