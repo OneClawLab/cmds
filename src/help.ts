@@ -20,6 +20,7 @@ const MAIN_VERBOSE = `
 Data Files:
   运行时索引: ~/.config/cmds/index.json (cmds scan 生成)
   tldr 索引:  随包分发的静态数据
+  xdb 数据集: 名称为'cmds", 可用 xdb col info cmds 查看详情
 
 Output:
   终端交互 (TTY): Markdown 风格可读文本
