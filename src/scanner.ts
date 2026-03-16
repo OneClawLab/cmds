@@ -104,15 +104,12 @@ const XDB_COLLECTION = 'cmds';
  */
 async function ensureXdbCollection(): Promise<boolean> {
   try {
-    // Check if collection already exists by listing
-    const { stdout } = await execCommand('xdb', ['col', 'list']);
-    const lines = stdout.trim().split('\n').filter((l) => l.trim().length > 0);
-    for (const line of lines) {
-      try {
-        const info = JSON.parse(line) as { name?: string };
-        if (info.name === XDB_COLLECTION) return true;
-      } catch { /* skip malformed lines */ }
-    }
+    // Check if collection already exists
+    const { stdout } = await execCommand('xdb', ['col', 'list', '--json']);
+    try {
+      const list = JSON.parse(stdout.trim()) as Array<{ name?: string }>;
+      if (list.some((entry) => entry.name === XDB_COLLECTION)) return true;
+    } catch { /* parse failed — assume not found */ }
     // Collection doesn't exist — create it
     await execCommand('xdb', ['col', 'init', XDB_COLLECTION, '--policy', 'hybrid/knowledge-base']);
     return true;
@@ -138,9 +135,9 @@ function buildXdbContent(cmd: CommandEntry): string {
  * Ingest command entries into xdb collection via batch put.
  * Only ingests commands that have meaningful content (description or examples).
  * Splits into chunks to avoid overwhelming the embedding API.
- * Silently returns on any failure.
+ * Returns false and writes a warning to stderr on failure.
  */
-async function ingestToXdb(commands: CommandEntry[]): Promise<void> {
+async function ingestToXdb(commands: CommandEntry[]): Promise<boolean> {
   const records = commands
     .filter((cmd) => cmd.description || cmd.examples.length > 0)
     .map((cmd) => ({
@@ -151,7 +148,7 @@ async function ingestToXdb(commands: CommandEntry[]): Promise<void> {
       category: cmd.category,
     }));
 
-  if (records.length === 0) return;
+  if (records.length === 0) return true;
 
   const BATCH_SIZE = 10;
 
@@ -160,10 +157,13 @@ async function ingestToXdb(commands: CommandEntry[]): Promise<void> {
     const jsonl = chunk.map((r) => JSON.stringify(r)).join('\n');
     try {
       await spawnCommand('xdb', ['put', XDB_COLLECTION, '--batch'], jsonl);
-    } catch {
-      // best-effort — ignore failures
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      process.stderr.write(`[cmds scan] xdb ingest failed at chunk ${Math.floor(i / BATCH_SIZE) + 1}: ${msg}\n`);
+      return false;
     }
   }
+  return true;
 }
 
 /**
@@ -235,7 +235,14 @@ export async function scan(
   if (xdbAvailable) {
     const colReady = await ensureXdbCollection();
     if (colReady) {
-      await ingestToXdb(commands);
+      const ingested = await ingestToXdb(commands);
+      if (!ingested) {
+        process.stderr.write(
+          '[cmds scan] xdb ingest incomplete. Make sure xdb embed is configured:\n' +
+          '  xdb config embed --set-provider openai --set-model text-embedding-3-small\n' +
+          '  xdb config embed --set-key <apiKey>\n',
+        );
+      }
     }
   }
 
