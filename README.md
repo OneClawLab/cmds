@@ -6,8 +6,7 @@ Built for both human developers and LLM agents.
 
 ## Features
 
-- Natural language command search (`cmds "find large files"`)
-- Smart routing — exact command names go to info, everything else to search
+- Natural language command search (`cmds find "find large files"`)
 - Semantic search via [xdb] with fuzzy fallback
 - Detailed command info from [tldr-pages](https://github.com/tldr-pages/tldr) data
 - Category-based browsing
@@ -29,12 +28,9 @@ cmds scan
 
 ```bash
 # Search by intent
-cmds "compress a directory"
+cmds find "compress a directory"
 
-# Exact command info (auto-detected)
-cmds tar
-
-# Explicit info
+# Command info
 cmds info curl
 
 # Browse by category
@@ -42,14 +38,14 @@ cmds list
 cmds list --category network
 
 # JSON output for scripts/agents
-cmds "disk usage" --json --limit 3
+cmds find "disk usage" --json --limit 3
 ```
 
 ## Commands
 
 | Command | Description |
 |---------|-------------|
-| `cmds <query>` | Smart search (semantic or fuzzy) |
+| `cmds find <query>` | Search commands by natural language query |
 | `cmds info <command>` | Detailed command info |
 | `cmds list [--category <type>]` | Browse commands by category |
 | `cmds scan` | Scan system and build runtime index |
