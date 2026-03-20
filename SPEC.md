@@ -1,113 +1,43 @@
-# cmds - Specification
+# cmds - command discovery CLI command
 
-## 1. 命令概述
+A modern system command discovery tool that bridges user intent with executable commands. More than a `$PATH` searcher — it's a semantic index and interactive manual for system commands. Designed for both human developers and LLM Agents.
 
-`cmds` 是一个现代化的系统命令发现工具，连接 **用户意图** 与 **可执行命令**。
-它不仅是 `$PATH` 的搜索器，更是系统命令的语义索引和交互式手册。
+## 决策记录
 
-核心面向两类用户：人类开发者 和 LLM Agent。
+1. **只发现不执行**：专注于"发现"与"解释"，不负责执行命令。
+2. **双层搜索策略**：优先使用 `xdb` 进行 Embedding + 向量检索；`xdb` 不可用时 fallback 到 fzf 风格的模糊匹配（fuzzysort）。`xdb` 可用性在扫描阶段检测并记录到运行时索引中，搜索时无需每次 `which`。
+3. **双层数据架构**：静态 tldr 全量索引（随包分发）+ 运行时索引（用户本地，仅含当前 OS 实际安装的命令）。
+4. **TTY 自动检测**：stdout 为 TTY 时输出人类可读 Markdown，为 Pipe 时自动切换 JSON。
 
-## 2. 设计原则
+## 1. Role
 
-- **Atomic**: 专注于"发现"与"解释"，不负责执行。
-- **Contextual**: 根据当前 OS 环境提供相关命令建议。
-- **Machine-Friendly**: 所有子命令均支持 `--json` 输出，便于 LLM 或脚本解析。
-- **Human-Readable**: 默认输出美观的 Markdown 格式（TTY 检测自动切换）。
-- **Dependable**: 信息准确可靠，可被其他工具（如 `pai`）依赖。
+- **Semantic Search**: Find commands by natural language intent (`cmds find`).
+- **Info Lookup**: Show detailed metadata for a specific command (`cmds info`).
+- **List & Filter**: Browse installed commands by category (`cmds list`).
+- **Scan & Index**: Scan system for installed commands, build runtime index (`cmds scan`).
 
-## 3. 子命令
+## 2. Tech Stack & Project Structure
 
-### A. 语义搜索: `cmds find <query>`
+遵循 `pai` repo 约定：
 
-```
-cmds find <query>
-cmds find "how to convert mp4 to gif"
-cmds find "find large files" --limit 10
-```
+- **TypeScript + ESM** (Node 20+)
+- **构建**: tsup (ESM, shebang banner)
+- **测试**: vitest + fast-check
+- **CLI 解析**: commander
+- **模糊匹配**: fuzzysort (or similar)
+- **向量搜索**: 通过外部 `xdb` 命令（独立 repo，可选依赖）
+- **数据源**: tldr-pages `pages/common`（本地 clone at `../tldr`）
 
-- `--limit <n>`: 返回结果数量，默认 5。
-- `--json`: JSON 格式输出。
+## 3. Data Directory Layout
 
-**搜索策略（双层）**:
-1. 当系统中存在 `xdb` 命令（意图驱动数据中心，独立 repo）时，使用 Embedding + 向量检索。
-2. Fallback: fzf 风格的模糊匹配（基于 fuzzysort 或类似库），匹配对象为命令的 name + description + examples 文本。
+| Purpose | Path |
+|---------|------|
+| Runtime index + config | `~/.config/cmds/` |
+| Static tldr full index | Bundled with package, `dist/data/tldr-index.json` |
 
-**`xdb` 可用性检测**:
-- 在扫描阶段检测 `xdb` 命令是否存在，结果记录在运行时索引中。
-- 搜索时根据记录决定走 xdb 还是 fallback，无需每次 `which`。
-- 若 `xdb` 存在但调用出错，静默 fallback 到模糊匹配。
+## 4. Data Architecture
 
-### B. 信息查询: `cmds info <command>`
-
-展示特定命令的详细元数据。
-
-```
-cmds info <command>
-cmds info find
-```
-
-- `--json`: JSON 格式输出。
-- 不支持短选项（如 `-i`），统一使用子命令形式。
-
-**输出内容**:
-- Description: 命令的核心作用。
-- Common Use Cases: 3-5 个最常用场景。
-- Examples: 直接可用的命令模板（来自 tldr 数据）。
-- Caveats: 常见坑点或安全警告。
-
-**查询逻辑**:
-1. 先在当前 OS 中确认该命令实际存在（通过 PATH 查找）。
-2. 若在运行时索引中有数据，返回结构化信息。
-3. 若索引中无数据，尝试执行 `<command> --help` 并提取第一段描述作为 fallback。
-4. 若命令不存在于系统中，明确告知用户（退出码 1）。
-
-### C. 列表与过滤: `cmds list`
-
-列出系统当前可用的命令。
-
-```
-cmds list [--category <type>]
-cmds list --category network
-cmds list --json
-```
-
-- `--category <type>`: 按分类过滤。
-- `--json`: JSON 格式输出。
-
-**默认行为（不带 --category）**: 输出 summary 概览：
-- 共多少个分类，每个分类下多少条命令。
-- 每个分类列出几个代表性命令名。
-- 给出进一步操作建议（如 `cmds list --category network`）。
-
-**分类体系**（面向 LLM 设计）:
-`filesystem` / `text-processing` / `search` / `archive` / `process` / `system` / `network` / `shell` / 等。
-分类不宜太细也不宜太粗，实现时可根据实际数据微调。
-
-### D. 扫描: `cmds scan`
-
-扫描当前系统已安装的命令，生成/更新运行时索引。
-
-```
-cmds scan
-cmds scan --enrich
-cmds scan --cmds pai,notifier,thread
-cmds scan --json
-```
-
-- `--enrich`: 对无信息命令额外尝试 `--help` / `-h` 提取描述。
-- `--cmds <cmd1,cmd2,...>`: 增量扫描指定命令。对每个命令运行 `--help --verbose`（fallback `--help`）获取完整 USAGE 输出，更新到运行时索引和 xdb。需先运行过 `cmds scan` 生成基础索引。
-- `--json`: JSON 格式输出扫描结果摘要。
-
-**全量扫描流程**:
-1. 检测系统已安装的可执行命令（优先 `compgen -c`，fallback 遍历 `$PATH`）。
-2. 与随包分发的 tldr 全量索引比对，筛选出本机实际安装的命令及其 metadata。
-3. 对于本机存在但 tldr 索引中没有的命令，尝试 `--help` 提取基本信息。
-4. 检测 `xdb` 命令可用性，记录到索引中。
-5. 将结果写入运行时索引（`~/.config/cmds/index.json`）。
-
-## 4. 数据架构
-
-### 4.1 静态数据: tldr 全量索引（随包分发）
+### 4.1 Static Data: tldr Full Index (bundled)
 
 **数据源**: [tldr-pages/tldr](https://github.com/tldr-pages/tldr) 仓库，仅使用 `pages/common` 下的英文数据（约 1000+ 命令）。
 
@@ -121,9 +51,8 @@ cmds scan --json
 - `npm run prepare:reload` — 从 tldr repo 抓取数据，生成全量索引 JSON。
 - `npm run prepare:categorize` — 补全索引中的 category 字段（可调用 `pai` 命令辅助）。
 
-**索引格式**: 单个 JSON 文件（目标大小: 几百 KB 以内）。
+**Index format** (single JSON file, target size: a few hundred KB):
 
-**每条命令的字段**:
 ```json
 {
   "name": "tar",
@@ -146,9 +75,9 @@ cmds scan --json
 > category 字段在 build script 中初始为空，后续通过 `prepare:categorize` 补全。
 > 具体字段在实现 build script 时根据 tldr Markdown 的实际内容进一步确定。
 
-### 4.2 运行时索引（用户本地）
+### 4.2 Runtime Index (user local)
 
-**位置**: `~/.config/cmds/index.json`
+**Location**: `~/.config/cmds/index.json`
 
 **内容**: 仅包含当前 OS 上实际安装的命令：
 - tldr 索引中有且本机也安装了的命令（带完整 metadata）。
@@ -161,58 +90,123 @@ cmds scan --json
 - `lastScanTime`: ISO 时间戳。
 - `systemInfo`: OS 类型等环境信息。
 
-### 4.3 目录约定
+## 5. CLI Commands
 
-| 用途 | 路径 |
-|------|------|
-| 运行时索引 + 配置 | `~/.config/cmds/` |
-| 静态 tldr 全量索引 | 随包分发，`dist/data/tldr-index.json` |
+### 5.1 `cmds find <query>`
 
-## 5. 输出格式
+Semantic search for commands by natural language intent.
 
-### 默认模式（TTY）
-人类可读的格式化文本（Markdown 风格）。
+```bash
+cmds find "how to convert mp4 to gif"
+cmds find "find large files" --limit 10
+```
 
-### JSON 模式（`--json`）
-结构化 JSON，便于 LLM 和脚本解析。所有子命令均支持。
+**Args**:
+- `--limit <n>` — number of results (default 5)
+- `--json` — JSON output
 
-### 自动检测
-根据 stdout 是否为 TTY 自动选择：
-- TTY → 人类可读格式
-- Pipe → JSON 格式
+**搜索策略（双层）**:
+1. 当系统中存在 `xdb` 命令时，使用 Embedding + 向量检索。
+2. Fallback: fzf 风格的模糊匹配（基于 fuzzysort），匹配对象为命令的 name + description + examples 文本。
 
-## 6. 退出码
+**`xdb` 可用性检测**:
+- 在扫描阶段检测 `xdb` 命令是否存在，结果记录在运行时索引中。
+- 搜索时根据记录决定走 xdb 还是 fallback，无需每次 `which`。
+- 若 `xdb` 存在但调用出错，静默 fallback 到模糊匹配。
 
-遵循 Linux 标准约定：
+### 5.2 `cmds info <command>`
 
-| 退出码 | 含义 |
-|--------|------|
-| 0 | 成功 |
-| 1 | 命令未找到 / 无搜索结果 |
-| 2 | 参数错误 / 用法错误 |
+Show detailed metadata for a specific command.
 
-## 7. 逻辑架构
+```bash
+cmds info find
+cmds info tar --json
+```
+
+**Args**:
+- `--json` — JSON output
+- 不支持短选项（如 `-i`），统一使用子命令形式。
+
+**Output contents**:
+- Description: core purpose of the command.
+- Common Use Cases: 3-5 most common scenarios.
+- Examples: ready-to-use command templates (from tldr data).
+- Caveats: common pitfalls or security warnings.
+
+**查询逻辑**:
+1. 先在当前 OS 中确认该命令实际存在（通过 PATH 查找）。
+2. 若在运行时索引中有数据，返回结构化信息。
+3. 若索引中无数据，尝试执行 `<command> --help` 并提取第一段描述作为 fallback。
+4. 若命令不存在于系统中，明确告知用户（退出码 1）。
+
+### 5.3 `cmds list`
+
+List installed commands, optionally filtered by category.
+
+```bash
+cmds list
+cmds list --category network
+cmds list --json
+```
+
+**Args**:
+- `--category <type>` — filter by category
+- `--json` — JSON output
+
+**默认行为（不带 --category）**: 输出 summary 概览：
+- 共多少个分类，每个分类下多少条命令。
+- 每个分类列出几个代表性命令名。
+- 给出进一步操作建议（如 `cmds list --category network`）。
+
+**Category taxonomy** (designed for LLM consumption):
+`filesystem` / `text-processing` / `search` / `archive` / `process` / `system` / `network` / `shell` / etc.
+分类不宜太细也不宜太粗，实现时可根据实际数据微调。
+
+### 5.4 `cmds scan`
+
+Scan installed commands and build/update the runtime index.
+
+```bash
+cmds scan
+cmds scan --enrich
+cmds scan --cmds pai,notifier,thread
+cmds scan --json
+```
+
+**Args**:
+- `--enrich` — additionally try `--help` / `-h` for commands without descriptions
+- `--cmds <cmd1,cmd2,...>` — incremental scan for specific commands; runs `--help --verbose` (fallback `--help`) to get full USAGE output, updates runtime index and xdb. Requires a prior `cmds scan` for base index.
+- `--json` — JSON output of scan summary
+
+**全量扫描流程**:
+1. 检测系统已安装的可执行命令（优先 `compgen -c`，fallback 遍历 `$PATH`）。
+2. 与随包分发的 tldr 全量索引比对，筛选出本机实际安装的命令及其 metadata。
+3. 对于本机存在但 tldr 索引中没有的命令，尝试 `--help` 提取基本信息。
+4. 检测 `xdb` 命令可用性，记录到索引中。
+5. 将结果写入运行时索引（`~/.config/cmds/index.json`）。
+
+## 6. Internal Architecture
 
 ```
 ┌─────────────────┐
-│  Input Parser    │  解析用户输入
+│  Input Parser    │  Parse user input
 └──────┬──────────┘
        │
   ┌────▼──────────┐
-  │ Smart Router  │  精确匹配 → info / 否则 → search
+  │ Smart Router  │  Exact match → info / otherwise → search
   └────┬──────────┘
        │
   ┌────▼──────────────┐
-  │ Search Engine     │  语义搜索 (xdb) / 模糊匹配 (fuzzysort)
-  │ Info Resolver     │  运行时索引查询 / --help fallback
-  │ List Aggregator   │  分类汇总 / 过滤
-  │ Scanner           │  PATH 扫描 / 索引生成
+  │ Search Engine     │  Semantic search (xdb) / fuzzy match (fuzzysort)
+  │ Info Resolver     │  Runtime index query / --help fallback
+  │ List Aggregator   │  Category summary / filter
+  │ Scanner           │  PATH scan / index generation
   └────┬──────────────┘
        │
   ┌────▼──────────────┐
   │ Knowledge Base    │
-  │  ├─ Static: tldr 全量索引 (dist/data/)
-  │  └─ Runtime: 本机索引 (~/.config/cmds/)
+  │  ├─ Static: tldr full index (dist/data/)
+  │  └─ Runtime: local index (~/.config/cmds/)
   └────┬──────────────┘
        │
   ┌────▼──────────────┐
@@ -220,40 +214,58 @@ cmds scan --json
   └───────────────────┘
 ```
 
-## 8. 交互示例
+## 7. Output Format
 
-### 人类使用
+### 7.1 stdout / stderr Contract
+
+- `stdout`: Command result data (search results, info output, list summary).
+- `stderr`: Progress, debug, error, and warning messages.
+
+### 7.2 Human / Machine Readability
+
+- Default (TTY): human-readable formatted text (Markdown style).
+- JSON mode (`--json`): structured JSON for LLM and script parsing.
+- Auto-detection: TTY → human-readable, Pipe → JSON.
+
+## 8. Error Handling & Exit Codes
+
+| Code | Meaning |
+|------|---------|
+| `0` | Success |
+| `1` | Command not found / no search results |
+| `2` | Argument / usage error |
+
+## 9. Usage Examples
+
+### Human Usage
 ```bash
 $ cmds find "find large files over 100MB"
-# → 返回 top 5 相关命令及简介
+# → top 5 related commands with descriptions
 
 $ cmds find "compress a directory" --json --limit 3
 
 $ cmds info find
-# → 显式 info 查询
+# → detailed info for the find command
 
 $ cmds list
-# → 返回分类概览 summary
+# → category summary overview
 
 $ cmds list --category network
-# → 返回 network 分类下所有已安装命令
+# → all installed commands in the network category
 
 $ cmds scan
-# → 扫描系统，更新运行时索引
+# → scan system, update runtime index
 ```
 
-### LLM Agent 调用
+### LLM Agent Usage
 ```bash
 $ cmds info tar --json
 $ cmds list --category archive --json
 $ cmds scan --json
 ```
 
-## 9. 技术规格
+## 10. Environment Variables
 
-- **Runtime**: Node.js（与 `pai` 保持一致）
-- **构建工具**: tsup (ESM)
-- **测试框架**: vitest + fast-check
-- **模糊匹配**: fuzzysort 或类似库
-- **向量搜索**: 通过外部 `xdb` 命令（独立 repo，可选依赖）
-- **数据源**: tldr-pages `pages/common`（本地 clone at `../tldr`）
+| Variable | Description | Default |
+|----------|-------------|---------|
+| (None) | cmds uses bundled data + local runtime index | `~/.config/cmds/` |
