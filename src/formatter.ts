@@ -4,6 +4,7 @@ import type {
   ListSummary,
   CommandEntry,
   ScanResult,
+  ScanCommandsResult,
 } from './types.js';
 
 export type Formattable =
@@ -11,7 +12,8 @@ export type Formattable =
   | CommandInfo
   | ListSummary
   | CommandEntry[]
-  | ScanResult;
+  | ScanResult
+  | ScanCommandsResult;
 
 export function isTTY(): boolean {
   return !!process.stdout.isTTY;
@@ -50,6 +52,10 @@ export function format(data: Formattable, options: { json: boolean }): string {
 
   if ('commandsFound' in data) {
     return formatScanResult(data as ScanResult);
+  }
+
+  if ('updated' in data) {
+    return formatScanCommandsResult(data as ScanCommandsResult);
   }
 
   return JSON.stringify(data, null, 2);
@@ -141,6 +147,19 @@ export function formatScanResult(result: ScanResult): string {
     `- Skipped (unsafe): ${result.commandsSkipped}`,
     `- xdb available: ${result.xdbAvailable ? 'yes' : 'no'}`,
     `- Scan time: ${result.scanTime}`,
+  ];
+  return lines.join('\n');
+}
+
+
+export function formatScanCommandsResult(result: ScanCommandsResult): string {
+  const lines: string[] = [
+    '## Scan Commands Complete',
+    '',
+    `- Requested: ${result.commands.length}`,
+    `- Updated: ${result.updated.length}${result.updated.length > 0 ? ' (' + result.updated.join(', ') + ')' : ''}`,
+    `- Failed: ${result.failed.length}${result.failed.length > 0 ? ' (' + result.failed.join(', ') + ')' : ''}`,
+    `- xdb ingested: ${result.xdbIngested ? 'yes' : 'no'}`,
   ];
   return lines.join('\n');
 }

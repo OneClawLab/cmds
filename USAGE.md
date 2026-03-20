@@ -82,8 +82,10 @@ cmds list --category filesystem --json
 ```bash
 cmds scan
 cmds scan --enrich        # 对无信息命令额外采集描述
+cmds scan --cmds pai,notifier,thread   # 增量扫描指定命令
 cmds scan --json
 cmds scan --enrich --json
+cmds scan --cmds pai,xdb --json
 ```
 
 扫描流程：
@@ -93,6 +95,8 @@ cmds scan --enrich --json
 4. 写入索引到 `~/.config/cmds/index.json`
 
 `--enrich` 模式会额外对所有无 tldr 数据的命令依次尝试 `--help` / `-h` / 不带参数运行，提取描述信息。PATH 中命令数量多时耗时较长，按需使用。
+
+`--cmds` 模式增量扫描指定命令：对每个命令运行 `--help --verbose`（fallback `--help`）获取完整 USAGE 输出，更新到运行时索引和 xdb。适合 TheClaw 自身组件更新后快速刷新索引。需先运行过 `cmds scan` 生成基础索引。
 
 首次使用或安装新软件后建议重新扫描。
 

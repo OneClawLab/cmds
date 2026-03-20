@@ -59,13 +59,15 @@ const SCAN_EXAMPLES = `
 Examples:
   $ cmds scan                                         # 扫描系统命令
   $ cmds scan --enrich                                # 扫描并对无信息命令尝试 --help/-h 采集描述
+  $ cmds scan --cmds pai,notifier,thread              # 增量扫描指定命令 (--help --verbose)
   $ cmds scan --json                                  # JSON 输出
   $ cmds scan --enrich --json                         # 采集 + JSON 输出
 
 Note:
   索引文件写入 ~/.config/cmds/index.json
   首次使用或安装新软件后建议重新扫描。
-  --enrich 会对每个无信息命令运行一次子进程，数量多时耗时较长。`;
+  --enrich 会对每个无信息命令运行一次子进程，数量多时耗时较长。
+  --cmds 增量更新指定命令的 USAGE 到索引和 xdb，需先运行过 cmds scan。`;
 
 // ── Setup functions ─────────────────────────────────────────
 

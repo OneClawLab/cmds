@@ -93,3 +93,13 @@ export interface ScanResult {
   xdbAvailable: boolean;
   scanTime: string;
 }
+
+
+// --- Scan Commands (incremental) ---
+
+export interface ScanCommandsResult {
+  commands: string[];
+  updated: string[];
+  failed: string[];
+  xdbIngested: boolean;
+}

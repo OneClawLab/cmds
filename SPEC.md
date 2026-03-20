@@ -89,12 +89,16 @@ cmds list --json
 
 ```
 cmds scan
+cmds scan --enrich
+cmds scan --cmds pai,notifier,thread
 cmds scan --json
 ```
 
+- `--enrich`: 对无信息命令额外尝试 `--help` / `-h` 提取描述。
+- `--cmds <cmd1,cmd2,...>`: 增量扫描指定命令。对每个命令运行 `--help --verbose`（fallback `--help`）获取完整 USAGE 输出，更新到运行时索引和 xdb。需先运行过 `cmds scan` 生成基础索引。
 - `--json`: JSON 格式输出扫描结果摘要。
 
-**扫描流程**:
+**全量扫描流程**:
 1. 检测系统已安装的可执行命令（优先 `compgen -c`，fallback 遍历 `$PATH`）。
 2. 与随包分发的 tldr 全量索引比对，筛选出本机实际安装的命令及其 metadata。
 3. 对于本机存在但 tldr 索引中没有的命令，尝试 `--help` 提取基本信息。

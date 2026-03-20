@@ -16,7 +16,7 @@ process.stderr.on('error', (err: NodeJS.ErrnoException) => {
 import { search } from './search.js';
 import { resolveInfo, CommandNotFoundError } from './info.js';
 import { listSummary, listByCategory, CategoryNotFoundError } from './list.js';
-import { scan } from './scanner.js';
+import { scan, scanCommands } from './scanner.js';
 import { loadRuntimeIndex, loadTldrIndex } from './data.js';
 import { format, shouldOutputJson } from './formatter.js';
 import { installHelp, addSubcommandExamples } from './help.js';
@@ -155,11 +155,35 @@ const scanCmd = program
   .command('scan')
   .description('Scan system for installed commands')
   .option('--enrich', 'run --help/-h on unknown commands to collect descriptions')
+  .option('--cmds <commands>', 'incrementally scan specific commands (comma-separated)')
   .option('--json', 'JSON output')
-  .action(async (opts: { enrich?: boolean; json?: boolean }) => {
+  .action(async (opts: { enrich?: boolean; cmds?: string; json?: boolean }) => {
     const json = shouldOutputJson(!!opts.json);
 
     try {
+      // --cmds mode: incremental scan for specific commands
+      if (opts.cmds) {
+        const names = opts.cmds.split(',').map((s) => s.trim()).filter(Boolean);
+        if (names.length === 0) {
+          process.stderr.write('Error: --cmds requires at least one command name.\n');
+          process.exitCode = 2;
+          return;
+        }
+        const isTty = !opts.json && process.stderr.isTTY;
+        const scanOpts: Parameters<typeof scanCommands>[1] = {};
+        if (isTty) {
+          scanOpts.onProgress = (current, total, name) => {
+            process.stderr.write(`\rscan [${current}/${total}] ${name}`.padEnd(60));
+          };
+        }
+        const result = await scanCommands(names, scanOpts);
+        if (isTty) process.stderr.write('\n');
+        process.stdout.write(format(result, { json }) + '\n');
+        process.exitCode = 0;
+        return;
+      }
+
+      // Full scan mode
       let tldrIndex: Awaited<ReturnType<typeof loadTldrIndex>>;
       try {
         tldrIndex = await loadTldrIndex();

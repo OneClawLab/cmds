@@ -2,7 +2,7 @@ import { readdir } from 'node:fs/promises';
 import path from 'node:path';
 import { commandExists, execCommand } from '../src/os-utils.js'
 import { spawnCommand } from './os-utils.js';
-import { saveRuntimeIndex } from './data.js';
+import { saveRuntimeIndex, loadRuntimeIndex } from './data.js';
 import { helpFallback } from './info.js';
 import { isEnrichSafe } from './safety.js';
 import type {
@@ -10,6 +10,7 @@ import type {
   CommandEntry,
   RuntimeIndex,
   ScanResult,
+  ScanCommandsResult,
 } from './types.js';
 
 /**
@@ -253,5 +254,104 @@ export async function scan(
     commandsSkipped,
     xdbAvailable,
     scanTime: runtimeIndex.meta.lastScanTime,
+  };
+}
+
+
+/**
+ * Capture full USAGE output from a command by running --help --verbose,
+ * falling back to --help if --verbose produces no output.
+ * Returns the raw output string, or null on failure.
+ */
+async function captureUsage(command: string, timeoutMs = 5000): Promise<string | null> {
+  for (const args of [['--help', '--verbose'], ['--help']]) {
+    try {
+      const { stdout, stderr } = await execCommand(command, args, timeoutMs);
+      const output = stdout || stderr;
+      if (output && output.trim().length > 0) return output.trim();
+    } catch (err) {
+      // Many commands write help to stderr and exit non-zero
+      if (err && typeof err === 'object' && 'stdout' in err) {
+        const e = err as { stdout?: string; stderr?: string };
+        const output = e.stdout || e.stderr;
+        if (output && output.trim().length > 0) return output.trim();
+      }
+    }
+  }
+  return null;
+}
+
+/**
+ * Incremental scan for specific commands.
+ * Runs `<cmd> --help --verbose` (fallback `--help`) to capture USAGE output,
+ * then updates the runtime index and xdb incrementally.
+ *
+ * Requires an existing runtime index (run `cmds scan` first).
+ */
+export async function scanCommands(
+  commandNames: string[],
+  options: { onProgress?: (current: number, total: number, name: string) => void } = {},
+): Promise<ScanCommandsResult> {
+  const index = await loadRuntimeIndex();
+  if (!index) {
+    throw new Error('No runtime index found. Run `cmds scan` first.');
+  }
+
+  const cmdMap = new Map(index.commands.map((c) => [c.name, c]));
+  const updated: string[] = [];
+  const failed: string[] = [];
+
+  for (let i = 0; i < commandNames.length; i++) {
+    const name = commandNames[i]!;
+    options.onProgress?.(i + 1, commandNames.length, name);
+
+    const usage = await captureUsage(name);
+    if (!usage) {
+      failed.push(name);
+      continue;
+    }
+
+    // Update or create entry in the index
+    let entry = cmdMap.get(name);
+    if (entry) {
+      entry.description = usage;
+      entry.source = 'help';
+    } else {
+      entry = {
+        name,
+        description: usage,
+        category: 'unknown',
+        examples: [],
+        source: 'help',
+        aliases: [],
+        tags: [],
+      };
+      index.commands.push(entry);
+      cmdMap.set(name, entry);
+    }
+    updated.push(name);
+  }
+
+  // Save updated index
+  index.meta.lastScanTime = new Date().toISOString();
+  await saveRuntimeIndex(index);
+
+  // Incremental xdb ingest for updated commands only
+  let xdbIngested = false;
+  if (updated.length > 0 && index.meta.xdbAvailable) {
+    const updatedEntries = updated
+      .map((n) => cmdMap.get(n))
+      .filter((e): e is CommandEntry => e !== undefined);
+    const colReady = await ensureXdbCollection();
+    if (colReady) {
+      xdbIngested = await ingestToXdb(updatedEntries);
+    }
+  }
+
+  return {
+    commands: commandNames,
+    updated,
+    failed,
+    xdbIngested,
   };
 }

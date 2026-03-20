@@ -6,6 +6,7 @@ import {
   formatListSummary,
   formatCategoryList,
   formatScanResult,
+  formatScanCommandsResult,
   shouldOutputJson,
 } from '../../src/formatter.js';
 import type {
@@ -14,6 +15,7 @@ import type {
   ListSummary,
   CommandEntry,
   ScanResult,
+  ScanCommandsResult,
 } from '../../src/types.js';
 
 describe('shouldOutputJson', () => {
@@ -209,5 +211,60 @@ describe('formatScanResult', () => {
     expect(output).toContain('Skipped (unsafe): 3');
     expect(output).toContain('xdb available: no');
     expect(output).toContain('Scan time: 2024-06-01T12:00:00Z');
+  });
+});
+
+
+describe('formatScanCommandsResult', () => {
+  it('shows all stats with command names', () => {
+    const result: ScanCommandsResult = {
+      commands: ['pai', 'notifier', 'broken'],
+      updated: ['pai', 'notifier'],
+      failed: ['broken'],
+      xdbIngested: true,
+    };
+    const output = formatScanCommandsResult(result);
+    expect(output).toContain('## Scan Commands Complete');
+    expect(output).toContain('Requested: 3');
+    expect(output).toContain('Updated: 2 (pai, notifier)');
+    expect(output).toContain('Failed: 1 (broken)');
+    expect(output).toContain('xdb ingested: yes');
+  });
+
+  it('omits command list when empty', () => {
+    const result: ScanCommandsResult = {
+      commands: ['broken'],
+      updated: [],
+      failed: ['broken'],
+      xdbIngested: false,
+    };
+    const output = formatScanCommandsResult(result);
+    expect(output).toContain('Updated: 0');
+    expect(output).not.toContain('Updated: 0 (');
+    expect(output).toContain('xdb ingested: no');
+  });
+});
+
+describe('format dispatches ScanCommandsResult', () => {
+  it('dispatches to formatScanCommandsResult in text mode', () => {
+    const data: ScanCommandsResult = {
+      commands: ['pai'],
+      updated: ['pai'],
+      failed: [],
+      xdbIngested: false,
+    };
+    const result = format(data, { json: false });
+    expect(result).toContain('Scan Commands Complete');
+  });
+
+  it('returns JSON in json mode', () => {
+    const data: ScanCommandsResult = {
+      commands: ['pai'],
+      updated: ['pai'],
+      failed: [],
+      xdbIngested: false,
+    };
+    const result = format(data, { json: true });
+    expect(JSON.parse(result)).toEqual(data);
   });
 });
