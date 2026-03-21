@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { RuntimeIndex, CommandEntry } from '../../src/types.js';
 
 // Mock dependencies before importing scanner
-vi.mock('../../src/os-utils.js', () => ({
+vi.mock('../../src/repo-utils/os.js', () => ({
   commandExists: vi.fn(),
   execCommand: vi.fn(),
   spawnCommand: vi.fn(),
@@ -17,7 +17,7 @@ vi.mock('../../src/data.js', () => ({
 }));
 
 import { scanCommands } from '../../src/scanner.js';
-import { execCommand, commandExists, spawnCommand } from '../../src/os-utils.js';
+import { execCommand, commandExists, spawnCommand } from '../../src/repo-utils/os.js';
 import { loadRuntimeIndex, saveRuntimeIndex } from '../../src/data.js';
 
 const mockedExecCommand = vi.mocked(execCommand);

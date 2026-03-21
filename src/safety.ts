@@ -1,4 +1,4 @@
-import { execCommand } from './os-utils.js';
+import { execCommand } from './repo-utils/os.js';
 
 /**
  * Commands that should never be executed for help extraction.

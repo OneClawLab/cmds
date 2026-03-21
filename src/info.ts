@@ -1,4 +1,4 @@
-import { commandExists, execCommand } from '../src/os-utils.js'
+import { commandExists, execCommand } from './repo-utils/os.js'
 import { isHelpLikeOutput } from './safety.js';
 import type { CommandInfo, RuntimeIndex, CommandEntry } from './types.js';
 

@@ -1,5 +1,5 @@
 import fuzzysort from 'fuzzysort';
-import { spawnCommand } from './os-utils.js';
+import { spawnCommand } from './repo-utils/os.js';
 import type { RuntimeIndex, SearchResult } from './types.js';
 
 /** Minimum internal fetch size for each engine before RRF merging. */

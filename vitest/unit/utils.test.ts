@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { commandExists, execCommand } from '../../src/os-utils.js';
+import { commandExists, execCommand } from '../../src/repo-utils/os.js';
 
 describe('utils', () => {
   describe('commandExists', () => {

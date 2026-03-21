@@ -3,13 +3,13 @@ import fc from 'fast-check';
 import type { RuntimeIndex } from '../../src/types.js';
 
 // Mock utils before importing info module
-vi.mock('../../src/os-utils.js', () => ({
+vi.mock('../../src/repo-utils/os.js', () => ({
   commandExists: vi.fn(),
   execCommand: vi.fn(),
 }));
 
 import { resolveInfo } from '../../src/info.js';
-import { commandExists } from '../../src/os-utils.js'
+import { commandExists } from '../../src/repo-utils/os.js'
 import { arbCommandEntry } from '../helpers/arbitraries.js';
 
 const mockedCommandExists = vi.mocked(commandExists);

@@ -1,7 +1,7 @@
 import { readdir } from 'node:fs/promises';
 import path from 'node:path';
-import { commandExists, execCommand } from '../src/os-utils.js'
-import { spawnCommand } from './os-utils.js';
+import { commandExists, execCommand } from './repo-utils/os.js'
+import { spawnCommand } from './repo-utils/os.js';
 import { saveRuntimeIndex, loadRuntimeIndex } from './data.js';
 import { helpFallback } from './info.js';
 import { isEnrichSafe } from './safety.js';
