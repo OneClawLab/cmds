@@ -13,16 +13,16 @@ describe('Property 8: Tldr index merge correctness', () => {
         fc.array(arbCommandName, { minLength: 0, maxLength: 20 }),
         fc.array(arbTldrEntry, { minLength: 0, maxLength: 20 }),
         (detectedCommands, tldrIndex) => {
-          const tldrNames = new Set(tldrIndex.map(e => e.name));
+          // Use Map to match mergeWithTldr's dedup behavior (last entry wins on duplicate names)
+          const tldrMap = new Map(tldrIndex.map(e => [e.name, e]));
           const result = mergeWithTldr(detectedCommands, tldrIndex);
 
           expect(result).toHaveLength(detectedCommands.length);
 
           for (const entry of result) {
-            if (tldrNames.has(entry.name)) {
+            const tldrEntry = tldrMap.get(entry.name);
+            if (tldrEntry) {
               expect(entry.source).toBe('tldr');
-              // Should have metadata from tldr
-              const tldrEntry = tldrIndex.find(t => t.name === entry.name)!;
               expect(entry.description).toBe(tldrEntry.description);
               expect(entry.category).toBe(tldrEntry.category);
             } else {
