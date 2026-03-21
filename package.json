@@ -1,7 +1,7 @@
 {
   "name": "cmds-cli",
   "type": "module",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "cmds is a linux command for discovery of all other linux commands in current OS, for human and AI.",
   "bin": {
     "cmds": "./dist/index.js"
