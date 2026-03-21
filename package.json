@@ -1,10 +1,10 @@
 {
-  "name": "cmds-cli",
+  "name": "@theclawlab/cmds",
   "type": "module",
-  "version": "1.0.0",
+  "version": "1.0.3",
   "description": "cmds is a linux command for discovery of all other linux commands in current OS, for human and AI.",
   "bin": {
-    "cmds": "./dist/index.js"
+    "cmds": "dist/index.js"
   },
   "scripts": {
     "dev": "tsup --watch --onSuccess \"node dist/index.js\"",
@@ -12,12 +12,23 @@
     "test": "vitest",
     "test:coverage": "vitest run --coverage",
     "release:local": "npm run build && npm link",
+    "release:public": "npm test && npm run build && npm publish --access public",
+    "release:public:skip-test": "npm run build && npm publish --access public",
     "prepare:reload": "npx tsx scripts/reload.ts",
     "prepare:categorize": "npx tsx scripts/categorize.ts"
   },
   "keywords": [],
   "author": "",
   "license": "MIT",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "USAGE.md"
+  ],
   "devDependencies": {
     "@types/node": "^25.4.0",
     "fast-check": "^4.6.0",

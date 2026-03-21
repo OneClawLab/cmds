@@ -15,6 +15,14 @@ Built for both human developers and LLM agents.
 
 ## Install
 
+### From npm
+
+```bash
+npm install -g @theclawlab/cmds
+```
+
+### From source
+
 ```bash
 npm install
 npm run build
