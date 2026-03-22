@@ -99,7 +99,7 @@ describe('rrfMerge', () => {
   it('ranks items appearing in both lists higher than single-list items', () => {
     const listA = [r('find'), r('grep'), r('ls')];
     const listB = [r('grep'), r('sed'), r('find')];
-    const merged = rrfMerge([listA, listB], 10);
+    const merged = rrfMerge([{ results: listA }, { results: listB }], 10);
     // find and grep appear in both lists — should rank above ls and sed
     const names = merged.map((x) => x.name);
     expect(names.indexOf('find')).toBeLessThan(names.indexOf('ls'));
@@ -108,25 +108,25 @@ describe('rrfMerge', () => {
 
   it('respects the limit parameter', () => {
     const list = [r('a'), r('b'), r('c'), r('d'), r('e')];
-    expect(rrfMerge([list], 3).length).toBe(3);
+    expect(rrfMerge([{ results: list }], 3).length).toBe(3);
   });
 
   it('deduplicates by name across lists', () => {
     const listA = [r('find'), r('grep')];
     const listB = [r('find'), r('ls')];
-    const merged = rrfMerge([listA, listB], 10);
+    const merged = rrfMerge([{ results: listA }, { results: listB }], 10);
     const names = merged.map((x) => x.name);
     expect(names.filter((n) => n === 'find').length).toBe(1);
   });
 
   it('returns empty array for empty input', () => {
     expect(rrfMerge([], 10)).toEqual([]);
-    expect(rrfMerge([[]], 10)).toEqual([]);
+    expect(rrfMerge([{ results: [] }], 10)).toEqual([]);
   });
 
   it('score is the RRF value (not original score)', () => {
     const list = [r('find', 999)];
-    const merged = rrfMerge([list], 10);
+    const merged = rrfMerge([{ results: list }], 10);
     // RRF score for rank-1 with k=60 is 1/61 ≈ 0.0164 — not 999
     expect(merged[0]!.score).toBeLessThan(1);
   });

@@ -8,6 +8,17 @@ const RRF_MIN_FETCH = 20;
 /** RRF constant — dampens the impact of rank differences. */
 const RRF_K = 60;
 
+/** Source weights for RRF — xdb (semantic) is weighted higher than fuzzy. */
+const RRF_WEIGHT_XDB = 1.0;
+const RRF_WEIGHT_FUZZY = 0.4;
+
+/**
+ * Minimum fuzzysort score for a result to participate in RRF when xdb is available.
+ * fuzzysort scores are negative (0 = perfect match). Typical range: -1000 ~ 0.
+ * Only results above this threshold are included, filtering out weak fuzzy matches.
+ */
+const FUZZY_SCORE_THRESHOLD = -200;
+
 /**
  * Build a searchable text string from a command entry by concatenating
  * name, description, and all example descriptions/commands.
@@ -77,19 +88,18 @@ export async function searchXdb(query: string, limit: number): Promise<SearchRes
 }
 
 /**
- * Merge ranked result lists using Reciprocal Rank Fusion.
- * RRF score = Σ 1 / (k + rank_i), where rank is 1-based.
- * Results present in only one list still get a score from that list alone.
+ * Merge ranked result lists using weighted Reciprocal Rank Fusion.
+ * RRF score = Σ weight_i / (k + rank_i), where rank is 1-based.
+ * Each list can carry an independent weight (default 1.0).
  * Final list is sorted by RRF score descending, then trimmed to `limit`.
  */
-export function rrfMerge(lists: SearchResult[][], limit: number): SearchResult[] {
-  // Map from name → { rrfScore, meta (first seen) }
+export function rrfMerge(lists: Array<{ results: SearchResult[]; weight?: number }>, limit: number): SearchResult[] {
   const acc = new Map<string, { rrfScore: number; result: SearchResult }>();
 
-  for (const list of lists) {
-    list.forEach((item, idx) => {
-      const rank = idx + 1; // 1-based
-      const contribution = 1 / (RRF_K + rank);
+  for (const { results, weight = 1.0 } of lists) {
+    results.forEach((item, idx) => {
+      const rank = idx + 1;
+      const contribution = weight / (RRF_K + rank);
       const existing = acc.get(item.name);
       if (existing) {
         existing.rrfScore += contribution;
@@ -126,7 +136,16 @@ export async function search(
       ]);
 
       if (xdbResults) {
-        return rrfMerge([xdbResults, fuzzyResults], options.limit);
+        // Filter out weak fuzzy matches before merging — only keep results
+        // above the score threshold to avoid polluting xdb-quality rankings.
+        const filteredFuzzy = fuzzyResults.filter((r) => r.score >= FUZZY_SCORE_THRESHOLD);
+        return rrfMerge(
+          [
+            { results: xdbResults, weight: RRF_WEIGHT_XDB },
+            { results: filteredFuzzy, weight: RRF_WEIGHT_FUZZY },
+          ],
+          options.limit,
+        );
       }
       // xdb failed — fall through to fuzzy only
       return fuzzyResults.slice(0, options.limit);

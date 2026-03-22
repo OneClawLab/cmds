@@ -69,7 +69,7 @@ export function formatSearchResults(results: SearchResult[]): string {
   const lines: string[] = ['## Search Results', ''];
   results.forEach((r, i) => {
     lines.push(`${i + 1}. **${r.name}** — ${r.description}`);
-    lines.push(`   Category: ${r.category} | Score: ${r.score}`);
+    lines.push(`   Category: ${r.category} | Score: ${r.score.toFixed(2)}`);
   });
   return lines.join('\n');
 }
