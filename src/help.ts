@@ -10,9 +10,6 @@ Examples:
   $ cmds list --category network                      # 按分类浏览
   $ cmds scan                                         # 扫描系统命令
 
-Prerequisites:
-  首次使用请先运行 cmds scan 生成运行时索引。
-
 Pipe:
   非 TTY 环境下自动输出 JSON（适合脚本和 LLM Agent）。`;
 
