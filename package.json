@@ -1,7 +1,7 @@
 {
   "name": "@theclawlab/cmds",
   "type": "module",
-  "version": "1.0.9",
+  "version": "2.1.0",
   "description": "cmds is a linux command for discovery of all other linux commands in current OS, for human and AI.",
   "bin": {
     "cmds": "dist/index.js"
